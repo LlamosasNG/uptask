@@ -8,7 +8,7 @@ export class TaskController {
       task.project = req.project.id;
       req.project.tasks.push(task.id);
       await Promise.allSettled([task.save(), req.project.save()]);
-      res.send("Tarea creada correctatamente");
+      res.send("Tarea creada correctamente");
     } catch (error) {
       res.status(500).json({ error: "Hubo un error" });
     }
