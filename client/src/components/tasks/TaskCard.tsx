@@ -1,8 +1,11 @@
-import { Task } from "@/types/index";
+import { Fragment } from "react";
 import { Menu, MenuButton, MenuItems, Transition } from "@headlessui/react";
 import { EllipsisVerticalIcon } from "@heroicons/react/20/solid";
-import { Fragment } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Task } from "@/types/index";
+import { deleteTask } from "@/api/TaskAPI";
+import { toast } from "react-toastify";
 
 type TaskcardProps = {
   task: Task;
@@ -10,6 +13,21 @@ type TaskcardProps = {
 
 export default function TaskCard({ task }: TaskcardProps) {
   const navigate = useNavigate();
+  const params = useParams();
+  const projectId = params.projectId!;
+
+  const queryClient = useQueryClient();
+  const { mutate } = useMutation({
+    mutationFn: deleteTask,
+    onError: (error) => {
+      toast.error(error.message);
+    },
+    onSuccess: (data) => {
+      toast.success(data);
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+    },
+  });
+
   return (
     <li className="p-5 bg-white border border-slate-300 flex justify-between gap-3">
       <div className="min-w-0 flex flex-col gap-y-3">
@@ -42,6 +60,9 @@ export default function TaskCard({ task }: TaskcardProps) {
                 <button
                   type="button"
                   className="block px-3 py-1 text-sm leading-6 text-gray-900 cursor-pointer  hover:bg-gray-100 w-full text-left rounded-sm"
+                  onClick={() => {
+                    navigate(location.pathname + `?viewTask=${task._id}`);
+                  }}
                 >
                   Ver Tarea
                 </button>
@@ -51,7 +72,7 @@ export default function TaskCard({ task }: TaskcardProps) {
                   type="button"
                   className="block px-3 py-1 text-sm leading-6 text-gray-900 cursor-pointer  hover:bg-gray-100 w-full text-left rounded-sm"
                   onClick={() =>
-                    navigate(location.pathname + `?taskId=${task._id}`)
+                    navigate(location.pathname + `?editTask=${task._id}`)
                   }
                 >
                   Editar Tarea
@@ -61,6 +82,7 @@ export default function TaskCard({ task }: TaskcardProps) {
                 <button
                   type="button"
                   className="block px-3 py-1 text-sm leading-6 text-red-500 cursor-pointer hover:bg-gray-100 w-full text-left rounded-sm"
+                  onClick={() => mutate({ projectId, taskId: task._id })}
                 >
                   Eliminar Tarea
                 </button>
