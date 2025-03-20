@@ -19,8 +19,8 @@ export default function DashboardView() {
       toast.error(error.message);
     },
     onSuccess: (data) => {
-      toast.success(data);
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success(data);
     },
   });
 

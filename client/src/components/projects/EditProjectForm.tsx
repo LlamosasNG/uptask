@@ -28,7 +28,7 @@ export default function EditProjectForm({
       description: data.description,
     },
   });
-  
+
   const queryClient = useQueryClient();
   const { mutate } = useMutation({
     mutationFn: updateProject,
@@ -36,8 +36,8 @@ export default function EditProjectForm({
       toast.error(error.message);
     },
     onSuccess: (data) => {
-        queryClient.invalidateQueries({queryKey: ["projects"]});
-        queryClient.invalidateQueries({queryKey: ["editProject", projectId]});
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["editProject", projectId] });
       toast.success(data);
       navigate("/");
     },
