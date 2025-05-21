@@ -107,4 +107,42 @@ export class AuthController {
         .json({ error: "Hubo un error al intentar iniciar sesión" });
     }
   };
+
+  static requestConfirmationCode = async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+
+      /* Usuario existe */
+      const user = await User.findOne({ email });
+      if (!user) {
+        const error = new Error("El usuario no existe");
+        res.status(404).json({ error: error.message });
+        return;
+      }
+
+      /* Usuario confirmado */
+      if (user.confirmed) {
+        const error = new Error("La cuenta ya ha sido confirmada");
+        res.status(409).json({ error: error.message });
+        return;
+      }
+
+      /* Generar token */
+      const token = new Token();
+      token.token = generateToken();
+      token.user = user.id;
+
+      /* Envíar email */
+      AuthEmail.sendConfirmationEmail({
+        email: user.email,
+        name: user.name,
+        token: token.token,
+      });
+
+      await Promise.allSettled([token.save(), user.save()]);
+      res.send("Revisa tu email para confirmar la cuenta");
+    } catch (error) {
+      res.status(500).json({ error: "Hubo un error al confirmar la cuenta" });
+    }
+  };
 }
