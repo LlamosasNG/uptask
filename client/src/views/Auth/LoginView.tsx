@@ -1,39 +1,44 @@
-import { useForm } from "react-hook-form";
-import { UserLoginForm } from "@/types/index";
-import { useMutation } from "@tanstack/react-query";
-import ErrorMessage from "@/components/ErrorMessage";
-import { Link } from "react-router-dom";
-import { login } from "@/api/AuthAPI";
-import { toast } from "react-toastify";
+import { login } from '@/api/AuthAPI'
+import ErrorMessage from '@/components/ErrorMessage'
+import { UserLoginForm } from '@/types/index'
+import { useMutation } from '@tanstack/react-query'
+import { useForm } from 'react-hook-form'
+import { Link } from 'react-router-dom'
+import { toast } from 'react-toastify'
 
 export default function LoginView() {
   const initialValues: UserLoginForm = {
-    email: "",
-    password: "",
-  };
+    email: '',
+    password: '',
+  }
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm({ defaultValues: initialValues });
+  } = useForm({ defaultValues: initialValues })
 
   const { mutate } = useMutation({
     mutationFn: login,
     onError: (error) => {
-      toast.error(error.message);
+      toast.error(error.message)
     },
     onSuccess: (data) => {
-      toast.success(data);
+      toast.success(data)
     },
-  });
+  })
 
-  const handleLogin = (formData: UserLoginForm) => mutate(formData);
+  const handleLogin = (formData: UserLoginForm) => mutate(formData)
 
   return (
     <>
+      <h1 className="text-5xl font-black text-white">Iniciar sesión</h1>
+      <p className="text-2xl font-light text-white mt-5">
+        Comienza a planear tus proyectos {''}
+        <span className=" text-fuchsia-500 font-bold"> iniciando sesión</span>
+      </p>
       <form
         onSubmit={handleSubmit(handleLogin)}
-        className="space-y-8 p-10 bg-white"
+        className="space-y-8 p-10 bg-white rounded-xl mt-10"
         noValidate
       >
         <div className="flex flex-col gap-5">
@@ -44,11 +49,11 @@ export default function LoginView() {
             type="email"
             placeholder="Email de Registro"
             className="w-full p-3  border-gray-300 border"
-            {...register("email", {
-              required: "El Email es obligatorio",
+            {...register('email', {
+              required: 'El Email es obligatorio',
               pattern: {
                 value: /\S+@\S+\.\S+/,
-                message: "E-mail no válido",
+                message: 'E-mail no válido',
               },
             })}
           />
@@ -62,8 +67,8 @@ export default function LoginView() {
             type="password"
             placeholder="Password de Registro"
             className="w-full p-3  border-gray-300 border"
-            {...register("password", {
-              required: "El Password es obligatorio",
+            {...register('password', {
+              required: 'El Password es obligatorio',
             })}
           />
           {errors.password && (
@@ -79,12 +84,18 @@ export default function LoginView() {
       </form>
       <nav className="mt-10 flex flex-col space-y-4">
         <Link
-          to={"/auth/register"}
+          to={'/auth/register'}
           className="text-center text-gray-300 hover:text-gray-400 font-normal"
         >
           ¿No tienes cuenta? Regístrate aquí
         </Link>
+        <Link
+          to={'/auth/forgot-password'}
+          className="text-center text-gray-300 hover:text-gray-400 font-normal"
+        >
+          ¿Olvidate tu contraseña? Reestablecer aquí
+        </Link>
       </nav>
     </>
-  );
+  )
 }

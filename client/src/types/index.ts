@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod'
 
 /* Auth && Users */
 export const authSchema = z.object({
@@ -7,27 +7,29 @@ export const authSchema = z.object({
   password: z.string(),
   password_confirmation: z.string(),
   token: z.string(),
-});
+})
 
-type Auth = z.infer<typeof authSchema>;
-export type UserLoginForm = Pick<Auth, "email" | "password">;
+type Auth = z.infer<typeof authSchema>
+export type UserLoginForm = Pick<Auth, 'email' | 'password'>
 export type UserRegistrationForm = Pick<
   Auth,
-  "name" | "email" | "password" | "password_confirmation"
->;
-export type RequestConfirmationCodeForm = Pick<Auth, "email">;
-export type ConfirmToken = Pick<Auth, "token">;
+  'name' | 'email' | 'password' | 'password_confirmation'
+>
+export type RequestConfirmationCodeForm = Pick<Auth, 'email'>
+export type ForgotPasswordForm = Pick<Auth, 'email'>
+export type NewPasswordForm = Pick<Auth, 'password' | 'password_confirmation'>
+export type ConfirmToken = Pick<Auth, 'token'>
 
 /* Tasks */
 export const taskStatusSchema = z.enum([
-  "pending",
-  "onHold",
-  "inProgress",
-  "underReview",
-  "completed",
-]);
+  'pending',
+  'onHold',
+  'inProgress',
+  'underReview',
+  'completed',
+])
 
-export type TaskStatus = z.infer<typeof taskStatusSchema>;
+export type TaskStatus = z.infer<typeof taskStatusSchema>
 
 export const taskSchema = z.object({
   _id: z.string(),
@@ -37,10 +39,10 @@ export const taskSchema = z.object({
   status: taskStatusSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
-});
+})
 
-export type Task = z.infer<typeof taskSchema>;
-export type TaskFormData = Pick<Task, "name" | "description">;
+export type Task = z.infer<typeof taskSchema>
+export type TaskFormData = Pick<Task, 'name' | 'description'>
 
 /* Porjects */
 export const projectSchema = z.object({
@@ -48,7 +50,7 @@ export const projectSchema = z.object({
   projectName: z.string(),
   clientName: z.string(),
   description: z.string(),
-});
+})
 
 export const dashboardProjectSchema = z.array(
   projectSchema.pick({
@@ -57,10 +59,10 @@ export const dashboardProjectSchema = z.array(
     clientName: true,
     description: true,
   })
-);
+)
 
-export type Project = z.infer<typeof projectSchema>;
+export type Project = z.infer<typeof projectSchema>
 export type ProjectFormData = Pick<
   Project,
-  "projectName" | "clientName" | "description"
->;
+  'projectName' | 'clientName' | 'description'
+>

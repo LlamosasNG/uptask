@@ -1,9 +1,9 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
+import mongoose, { Document, Schema, Types } from 'mongoose'
 
 export interface IToken extends Document {
-  token: string;
-  user: Types.ObjectId;
-  createdAt: Date;
+  token: string
+  user: Types.ObjectId
+  createdAt: Date
 }
 
 const tokenSchema = new Schema({
@@ -13,14 +13,14 @@ const tokenSchema = new Schema({
   },
   user: {
     type: Types.ObjectId,
-    ref: "User",
+    ref: 'User',
   },
-  createdAt: {
+  expiresAt: {
     type: Date,
     default: Date.now,
-    expires: "10m",
+    expires: '10m',
   },
-});
+})
 
-const Token = mongoose.model<IToken>("Token", tokenSchema);
-export default Token;
+const Token = mongoose.model<IToken>('Token', tokenSchema)
+export default Token

@@ -1,14 +1,16 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import AppLayout from "@/layouts/AppLayout";
-import AuthLayout from "@/layouts/AuthLayout";
-import DashboardView from "@/views/DashboardView";
-import CreateProjectView from "./views/projects/CreateProjectView";
-import EditProjectView from "./views/projects/EditProjectView";
-import ProjectDetailsView from "./views/projects/ProjectDetailsView";
-import LoginView from "./views/Auth/LoginView";
-import RegisterView from "./views/Auth/RegisterView";
-import ConfirmAccountView from "./views/Auth/ConfirmAccountView";
-import RequestNewCodeView from "./views/Auth/RequestNewCodeView";
+import AppLayout from '@/layouts/AppLayout'
+import AuthLayout from '@/layouts/AuthLayout'
+import DashboardView from '@/views/DashboardView'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import ConfirmAccountView from './views/Auth/ConfirmAccountView'
+import ForgotPasswordView from './views/Auth/ForgotPasswordView'
+import LoginView from './views/Auth/LoginView'
+import NewPasswordView from './views/Auth/NewPasswordView'
+import RegisterView from './views/Auth/RegisterView'
+import RequestNewCodeView from './views/Auth/RequestNewCodeView'
+import CreateProjectView from './views/projects/CreateProjectView'
+import EditProjectView from './views/projects/EditProjectView'
+import ProjectDetailsView from './views/projects/ProjectDetailsView'
 
 export default function Router() {
   return (
@@ -31,8 +33,13 @@ export default function Router() {
             element={<ConfirmAccountView />}
           />
           <Route path="/auth/request-code" element={<RequestNewCodeView />} />
+          <Route
+            path="/auth/forgot-password"
+            element={<ForgotPasswordView />}
+          />
+          <Route path="/auth/new-password" element={<NewPasswordView />} />
         </Route>
       </Routes>
     </BrowserRouter>
-  );
+  )
 }
