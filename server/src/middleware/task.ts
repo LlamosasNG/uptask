@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from "express";
+import type { NextFunction, Request, Response } from "express";
 import Task, { ITask } from "../models/Task";
 
 declare global {
@@ -40,3 +40,17 @@ export async function taskBelongsToProject(
   }
   next();
 }
+
+export async function hasAuthorization(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  if (req.user.id !== req.project.manager) {
+    const error = new Error("Acción no válida");
+    res.status(400).json({ error: error.message });
+    return;
+  }
+  next();
+}
+
