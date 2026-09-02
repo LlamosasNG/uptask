@@ -126,6 +126,22 @@ describe('task planning API', () => {
     })
   })
 
+  it('allows assigning the project manager and populates them in the project-task list', async () => {
+    const { manager, project } = await fixture()
+
+    const create = await createTask(project.id, manager._id, { assignee: manager.id })
+    const response = await request(app)
+      .get(`/api/projects/${project.id}/tasks`)
+      .set(auth(manager._id))
+
+    expect(create.status).toBe(200)
+    expect(response.status).toBe(200)
+    expect(response.body).toHaveLength(1)
+    expect(response.body[0]).toMatchObject({
+      assignee: { _id: manager.id, name: 'Manager' },
+    })
+  })
+
   it('updates planning fields, including clearing nullable fields', async () => {
     const { manager, member, project } = await fixture()
     const task = await Task.create({
@@ -167,6 +183,36 @@ describe('task planning API', () => {
       dueDate: null,
       assignee: null,
     })
+  })
+
+  it.each([
+    ['priority', { priority: 'urgent' }, 'La prioridad no es válida'],
+    ['due date', { dueDate: 'not-a-date' }, 'La fecha de vencimiento no es válida'],
+    ['outsider assignee', (outsiderId: string) => ({ assignee: outsiderId }), 'El usuario asignado debe pertenecer al proyecto'],
+  ])('rejects an invalid %s when updating a task', async (_field, invalidValue, message) => {
+    const { manager, outsider, project } = await fixture()
+    const task = await Task.create({
+      name: 'Roadmap',
+      description: 'Plan the next release',
+      project: project._id,
+    })
+    const planningValue = typeof invalidValue === 'function' ? invalidValue(outsider.id) : invalidValue
+
+    const response = await request(app)
+      .put(`/api/projects/${project.id}/tasks/${task.id}`)
+      .set(auth(manager._id))
+      .send({ name: 'Roadmap', description: 'Plan the next release', ...planningValue })
+
+    expect(response.status).toBe(422)
+    expect(response.body).toEqual({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Datos no válidos',
+        fields: { [Object.keys(planningValue)[0]]: message },
+      },
+    })
+    const unchangedTask = await Task.findById(task.id)
+    expect(unchangedTask).toMatchObject({ priority: 'medium', assignee: null, dueDate: null })
   })
 
   it('clears a removed member from tasks assigned to them', async () => {

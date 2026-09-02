@@ -34,3 +34,43 @@
 - `git diff --check` reported no whitespace errors.
 - The client schemas deliberately use optional planning fields and optional history timestamps so documents created before this migration continue to parse. Newly created API records always emit the model defaults and timestamped history entries.
 - No pre-existing user changes were included in this task's staged scope.
+
+## Fix round 1: request type and branch coverage
+
+### Root cause
+
+`TaskFormData` was a `Pick<Task, ...>`, which copied `assignee` from the response schema. Response assignees are populated objects (`{ _id, name } | null`), but create/update requests require an ID string or `null`. The client request type therefore described the wrong API boundary.
+
+### Change
+
+- Replaced the response-derived form type with `taskFormSchema` and `TaskFormData` inferred from it. The request schema accepts `assignee?: string | null`, ISO date/date-time `dueDate?: string | null`, and optional priority.
+- Added integration coverage for manager assignment and its populated `GET /:projectId/tasks` response.
+- Added update-route validation coverage for invalid priority, invalid due date, and outsider assignee values, including persisted-state checks.
+
+### RED evidence
+
+The original implementation already contained the shared validation/population logic, so the new tests were mutation-checked to prove they guard the intended branches:
+
+1. Temporarily disabled manager membership, removed the update-route planning validators, and ran `cd server && pnpm test -- taskPlanning.test.ts`.
+   - Result: 4 failures among 23 tests.
+   - Manager assignment returned `422` instead of `200`.
+   - Invalid priority and due-date updates returned `500` instead of standardized `422` errors.
+   - Outsider assignment update returned `200` instead of `422`.
+2. Restored those branches, temporarily removed assignee population from `TaskController.getProjectTasks`, and ran the same command.
+   - Result: 1 failure among 23 tests.
+   - `GET /:projectId/tasks` returned a raw assignee ID where the test required `{ _id, name }`.
+
+All temporary mutations were restored before final verification.
+
+### GREEN evidence
+
+Fresh final commands and output:
+
+- `cd server && pnpm test -- taskPlanning.test.ts`
+  - Exit `0`; 3 test files passed, 23 tests passed.
+- `cd server && pnpm test`
+  - Exit `0`; 3 test files passed, 23 tests passed.
+- `cd server && pnpm build`
+  - Exit `0`; TypeScript compilation passed.
+- `cd client && pnpm build`
+  - Exit `0`; TypeScript compilation and Vite production build passed.

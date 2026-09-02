@@ -104,7 +104,14 @@ export const taskProjectSchema = taskSchema.pick({
 })
 
 export type Task = z.infer<typeof taskSchema>
-export type TaskFormData = Pick<Task, 'name' | 'description' | 'assignee' | 'dueDate' | 'priority'>
+export const taskFormSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  assignee: z.string().nullable().optional(),
+  dueDate: z.string().date().or(z.string().datetime()).nullable().optional(),
+  priority: taskPrioritySchema.optional(),
+})
+export type TaskFormData = z.infer<typeof taskFormSchema>
 export type TaskProject = z.infer<typeof taskProjectSchema>
 
 /** Projects */
