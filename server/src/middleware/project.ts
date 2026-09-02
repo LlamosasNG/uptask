@@ -1,5 +1,8 @@
-import type { NextFunction, Request, Response } from 'express'
+import type { NextFunction, Request, RequestHandler, Response } from 'express'
+import { isValidObjectId } from 'mongoose'
 import Project, { IProject } from '../models/Project'
+import { HttpError } from '../errors/HttpError'
+import { asyncHandler } from './error'
 
 declare global {
   namespace Express {
@@ -8,22 +11,19 @@ declare global {
     }
   }
 }
-export async function projectExists(
+export const projectExists: RequestHandler = asyncHandler(async (
   req: Request,
   res: Response,
   next: NextFunction
-) {
-  try {
-    const { projectId } = req.params
-    const project = await Project.findById(projectId)
-    if (!project) {
-      const error = new Error('Proyecto no encontrado')
-      res.status(404).json({ error: error.message })
-      return
-    }
-    req.project = project
-    next()
-  } catch (error) {
-    res.status(500).json({ error: 'Hubo un error' })
+) => {
+  const projectId = req.params.projectId ?? req.params.id
+  if (!isValidObjectId(projectId)) {
+    throw new HttpError(422, 'VALIDATION_ERROR', 'Datos no válidos', { projectId: 'ID no válido' })
   }
-}
+  const project = await Project.findById(projectId)
+  if (!project) {
+    throw new HttpError(404, 'NOT_FOUND', 'Proyecto no encontrado')
+  }
+  req.project = project
+  next()
+})

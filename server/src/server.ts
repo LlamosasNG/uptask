@@ -1,14 +1,12 @@
 import cors from 'cors'
-import dotenv from 'dotenv'
 import express, { Express } from 'express'
 import morgan from 'morgan'
 import { corsConfig } from './config/cors'
-import { connectDB } from './config/db'
+import './config/env'
+import { errorHandler } from './middleware/error'
+import { notFound } from './middleware/notFound'
 import authRoutes from './routes/authRoutes'
 import projectRoutes from './routes/projectRoutes'
-
-dotenv.config()
-connectDB()
 
 /* Crear servidor */
 const app: Express = express()
@@ -22,5 +20,7 @@ app.use(express.json())
 
 app.use('/api/auth', authRoutes)
 app.use('/api/projects', projectRoutes)
+app.use(notFound)
+app.use(errorHandler)
 
 export default app

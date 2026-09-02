@@ -1,8 +1,11 @@
-import type { Request, Response } from 'express'
+import type { Request, RequestHandler, Response } from 'express'
+import mongoose from 'mongoose'
+import { HttpError } from '../errors/HttpError'
 import Note, { INote } from '../models/Note'
+import { asyncHandler } from '../middleware/error'
 
 export class NoteController {
-  static createNote = async (req: Request<{}, {}, INote>, res: Response) => {
+  static createNote: RequestHandler = asyncHandler(async (req: Request<{}, {}, INote>, res: Response) => {
     const { content } = req.body
     const note = new Note()
     note.content = content
@@ -10,43 +13,46 @@ export class NoteController {
     note.task = req.task._id
     req.task.notes.push(note._id)
 
+    const session = await mongoose.startSession()
     try {
-      await Promise.allSettled([note.save(), req.task.save()])
+      await session.withTransaction(async () => {
+        await note.save({ session })
+        await req.task.save({ session })
+      })
       res.send('Nota Creada Correctamente')
-    } catch (error) {
-      res.status(500).json({ message: 'Hubo un error' })
+    } finally {
+      await session.endSession()
     }
-  }
+  })
 
-  static getTaskNotes = async (req: Request, res: Response) => {
-    try {
-      const notes = await Note.find({ task: req.task._id })
-      res.json(notes)
-    } catch (error) {
-      res.status(500).json({ message: 'Hubo un error' })
-    }
-  }
+  static getTaskNotes: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
+    const notes = await Note.find({ task: req.task._id })
+    res.json(notes)
+  })
 
-  static deleteNote = async (req: Request, res: Response) => {
+  static deleteNote: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
     const { noteId } = req.params
     const note = await Note.findById(noteId)
 
     if (!note) {
-      const error = new Error('Nota no encontrada')
-      return res.status(404).json({ error: error.message })
+      throw new HttpError(404, 'NOT_FOUND', 'Nota no encontrada')
+    }
+    if (note.task.toString() !== req.task._id.toString()) {
+      throw new HttpError(404, 'NOT_FOUND', 'Nota no encontrada')
     }
     if (note.createdBy.toString() !== req.user._id.toString()) {
-      const error = new Error('Acción no válida')
-      return res.status(403).json({ error: error.message })
+      throw new HttpError(403, 'FORBIDDEN', 'Acción no válida')
     }
+    const session = await mongoose.startSession()
     try {
-      req.task.notes = req.task.notes.filter(
-        (note) => note.toString() !== noteId.toString()
-      )
-      await Promise.allSettled([req.task.save(), note.deleteOne()])
+      await session.withTransaction(async () => {
+        req.task.notes = req.task.notes.filter((taskNote) => taskNote.toString() !== noteId)
+        await req.task.save({ session })
+        await Note.deleteOne({ _id: note._id }, { session })
+      })
       res.send('Nota Eliminada Correctamente')
-    } catch (error) {
-      res.status(500).json({ message: 'Hubo un error' })
+    } finally {
+      await session.endSession()
     }
-  }
+  })
 }

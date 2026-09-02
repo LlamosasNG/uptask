@@ -1,5 +1,8 @@
-import { NextFunction, Request, Response } from 'express'
+import { NextFunction, Request, RequestHandler, Response } from 'express'
 import jwt from 'jsonwebtoken'
+import { env } from '../config/env'
+import { HttpError } from '../errors/HttpError'
+import { asyncHandler } from './error'
 import User, { IUser } from '../models/User'
 
 declare global {
@@ -10,31 +13,30 @@ declare global {
   }
 }
 
-export const authenticate = async (
+export const authenticate: RequestHandler = asyncHandler(async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   const bearer = req.headers.authorization
-  if (!bearer) {
-    const error = new Error('No autorizado')
-    res.status(401).json({ error: error.message })
-    return
+  if (!bearer?.startsWith('Bearer ')) {
+    throw new HttpError(401, 'UNAUTHORIZED', 'No autorizado')
   }
   const token = bearer.split(' ')[1]
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const decoded = jwt.verify(token, env.JWT_SECRET)
     if (typeof decoded === 'object' && decoded._id) {
       const user = await User.findById(decoded._id).select('id email name')
       if (user) {
         req.user = user
-        next()
+        return next()
       } else {
-        res.status(500).json({ error: 'Token no válido' })
-        return
+        throw new HttpError(401, 'UNAUTHORIZED', 'Token no válido')
       }
     }
+    throw new HttpError(401, 'UNAUTHORIZED', 'Token no válido')
   } catch (error) {
-    res.status(500).json({ error: 'Token no válido' })
+    if (error instanceof HttpError) throw error
+    throw new HttpError(401, 'UNAUTHORIZED', 'Token no válido')
   }
-}
+})

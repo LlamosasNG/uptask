@@ -1,5 +1,8 @@
-import type { NextFunction, Request, Response } from 'express'
+import type { NextFunction, Request, RequestHandler, Response } from 'express'
+import { isValidObjectId } from 'mongoose'
 import Task, { ITask } from '../models/Task'
+import { HttpError } from '../errors/HttpError'
+import { asyncHandler } from './error'
 
 declare global {
   namespace Express {
@@ -8,48 +11,29 @@ declare global {
     }
   }
 }
-export async function taskExists(
+export const taskExists: RequestHandler = asyncHandler(async (
   req: Request,
   res: Response,
   next: NextFunction
-) {
-  try {
-    const { taskId } = req.params
-    const task = await Task.findById(taskId)
-    if (!task) {
-      const error = new Error('Tarea no encontrada')
-      res.status(404).json({ error: error.message })
-      return
-    }
-    req.task = task
-    next()
-  } catch (error) {
-    res.status(500).json({ error: 'Hubo un error' })
+) => {
+  if (!isValidObjectId(req.params.taskId)) {
+    throw new HttpError(422, 'VALIDATION_ERROR', 'Datos no válidos', { taskId: 'ID no válido' })
   }
-}
-
-export async function taskBelongsToProject(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  if (req.task.project.toString() !== req.project._id.toString()) {
-    const error = new Error('Acción no válida')
-    res.status(400).json({ error: error.message })
-    return
+  const task = await Task.findById(req.params.taskId)
+  if (!task) {
+    throw new HttpError(404, 'NOT_FOUND', 'Tarea no encontrada')
   }
+  req.task = task
   next()
-}
+})
 
-export async function hasAuthorization(
+export const taskBelongsToProject: RequestHandler = (
   req: Request,
   res: Response,
   next: NextFunction
-) {
-  if (req.user._id.toString() !== req.project.manager.toString()) {
-    const error = new Error('Acción no válida')
-    res.status(400).json({ error: error.message })
-    return
+) => {
+  if (!req.task || !req.project || req.task.project.toString() !== req.project._id.toString()) {
+    return next(new HttpError(404, 'NOT_FOUND', 'Tarea no encontrada'))
   }
   next()
 }
