@@ -3,7 +3,6 @@ import { useAuth } from '@/hooks/useAuth'
 import { Note } from '@/types/index'
 import { formatDate } from '@/utils/utils'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useMemo } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import LoadingApp from '../LoadingApp'
@@ -20,7 +19,7 @@ export default function NoteDetail({ note }: NoteDetailProps) {
   const taskId = queryParams.get('viewTask')!
 
   const { data, isLoading } = useAuth()
-  const canDelete = useMemo(() => data?._id === note.createdBy._id, [data])
+  const canDelete = data?._id === note.createdBy._id
 
   const queryClient = useQueryClient()
   const { mutate } = useMutation({

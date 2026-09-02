@@ -19,7 +19,7 @@ export async function createTask({
     return data
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }
@@ -37,7 +37,7 @@ export async function getTaskById({
     }
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }
@@ -53,7 +53,7 @@ export async function updateTask({
     return data
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }
@@ -68,7 +68,7 @@ export async function deleteTask({
     return data
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }
@@ -84,7 +84,7 @@ export async function updateStatus({
     return data
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }

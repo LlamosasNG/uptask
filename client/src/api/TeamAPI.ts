@@ -23,7 +23,7 @@ export async function findMemberById({
     return data
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }
@@ -38,7 +38,7 @@ export async function addMemberToProject({
     return data
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }
@@ -53,7 +53,7 @@ export async function getProjectTeam(projectId: TeamAPIProps['projectId']) {
     }
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }
@@ -68,7 +68,7 @@ export async function removeMemberToProject({
     return data
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }

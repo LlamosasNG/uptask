@@ -2,7 +2,7 @@ import { changePassword } from '@/api/ProfileAPI'
 import ErrorMessage from '@/components/ErrorMessage'
 import { UpdateCurrentPasswordForm } from '@/types/index'
 import { useMutation } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'react-toastify'
 
 export default function ChangePasswordView() {
@@ -16,11 +16,11 @@ export default function ChangePasswordView() {
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     formState: { errors },
   } = useForm({ defaultValues: initialValues })
 
-  const password = watch('password')
+  const password = useWatch({ control, name: 'password' })
 
   const { mutate } = useMutation({
     mutationFn: changePassword,

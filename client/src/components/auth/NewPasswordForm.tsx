@@ -2,7 +2,7 @@ import { updatePasswordWithToken } from '@/api/AuthAPI'
 import ErrorMessage from '@/components/ErrorMessage'
 import type { ConfirmToken, NewPasswordForm } from '@/types/index'
 import { useMutation } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
@@ -19,7 +19,7 @@ export default function NewPasswordForm({ token }: NewPasswordFormProps) {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     reset,
     formState: { errors },
   } = useForm({ defaultValues: initialValues })
@@ -44,7 +44,7 @@ export default function NewPasswordForm({ token }: NewPasswordFormProps) {
     mutate(data)
   }
 
-  const password = watch('password')
+  const password = useWatch({ control, name: 'password' })
 
   return (
     <>

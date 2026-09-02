@@ -17,7 +17,7 @@ export async function createAccount(formData: UserRegistrationForm) {
     return data
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }
@@ -28,7 +28,7 @@ export async function confirmAccount(formData: ConfirmToken) {
     return data
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }
@@ -41,7 +41,7 @@ export async function requestConfirmationCode(
     return data
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }
@@ -52,7 +52,7 @@ export async function login(formData: UserLoginForm) {
     localStorage.setItem('AUTH_TOKEN', data)
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }
@@ -63,7 +63,7 @@ export async function forgotPassword(formData: ForgotPasswordForm) {
     return data
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }
@@ -74,7 +74,7 @@ export async function validateToken(formData: ConfirmToken) {
     return data
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }
@@ -91,7 +91,7 @@ export async function updatePasswordWithToken({
     return data
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }
@@ -105,7 +105,7 @@ export async function getUser() {
     }
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }
@@ -116,7 +116,7 @@ export async function checkPassword(formData: CheckPasswordForm) {
     return data
   } catch (error) {
     if (isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.error)
+      throw new Error(error.response.data.error, { cause: error })
     }
   }
 }
