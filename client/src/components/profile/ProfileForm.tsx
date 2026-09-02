@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
 import ErrorMessage from '../ErrorMessage'
+import { queryKeys } from '@/api/queryKeys'
 
 type ProfileFormProps = {
   data: User
@@ -22,7 +23,7 @@ export default function ProfileForm({ data }: ProfileFormProps) {
     onError: (error) => toast.error(error.message),
     onSuccess: (data) => {
       toast.success(data)
-      queryClient.invalidateQueries({ queryKey: ['user'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.user() })
     },
   })
 

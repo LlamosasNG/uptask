@@ -5,19 +5,17 @@ import {
   Transition,
 } from '@headlessui/react'
 import { Bars3Icon } from '@heroicons/react/20/solid'
-import { useQueryClient } from '@tanstack/react-query'
 import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import { User } from '../types'
+import { endAuthSession } from '@/lib/authSession'
 
 type NavMenuProps = {
   name: User['name']
 }
 export default function NavMenu({ name }: NavMenuProps) {
-  const queryClient = useQueryClient()
   const logout = () => {
-    localStorage.removeItem('AUTH_TOKEN')
-    queryClient.invalidateQueries({ queryKey: ['user'] })
+    endAuthSession()
   }
 
   return (

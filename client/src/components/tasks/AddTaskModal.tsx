@@ -13,6 +13,7 @@ import TaskForm from "./TaskForm";
 import { TaskFormData } from "@/types/index";
 import { createTask } from "@/api/TaskAPI";
 import { toast } from "react-toastify";
+import { queryKeys } from '@/api/queryKeys';
 
 export default function AddTaskModal() {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ export default function AddTaskModal() {
       toast.error(error.message);
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
       toast.success(data);
       reset();
       navigate(location.pathname, { replace: true });

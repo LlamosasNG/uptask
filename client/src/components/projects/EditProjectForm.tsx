@@ -5,6 +5,7 @@ import { Project, ProjectFormData } from "@/types/index";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateProject } from "@/api/ProjectAPI";
 import { toast } from "react-toastify";
+import { queryKeys } from '@/api/queryKeys';
 
 type EditProjectFormProps = {
   data: ProjectFormData;
@@ -36,8 +37,8 @@ export default function EditProjectForm({
       toast.error(error.message);
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      queryClient.invalidateQueries({ queryKey: ["editProject", projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.edit(projectId) });
       toast.success(data);
       navigate("/");
     },

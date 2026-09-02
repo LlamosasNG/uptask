@@ -7,6 +7,7 @@ import { useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import DropTask from './DropTask'
 import TaskCard from './TaskCard'
+import { queryKeys } from '@/api/queryKeys'
 
 type TaskListProps = {
   tasks: TaskProject[]
@@ -50,7 +51,7 @@ export default function TaskList({ tasks, canEdit }: TaskListProps) {
       toast.error(error.message)
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) })
       toast.success(data)
     },
   })
@@ -63,7 +64,7 @@ export default function TaskList({ tasks, canEdit }: TaskListProps) {
 
       mutate({ projectId, taskId, status })
 
-      queryClient.setQueryData(['project', projectId], (prevData: Project) => {
+      queryClient.setQueryData(queryKeys.projects.detail(projectId), (prevData: Project) => {
         const updatedTasks = prevData.tasks.map((task) => {
           if (task._id === taskId) {
             return {

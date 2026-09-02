@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import LoadingApp from '../LoadingApp'
+import { queryKeys } from '@/api/queryKeys'
 
 type NoteDetailProps = {
   note: Note
@@ -27,7 +28,7 @@ export default function NoteDetail({ note }: NoteDetailProps) {
     onError: (error) => toast.error(error.message),
     onSuccess: (data) => {
       toast.success(data)
-      queryClient.invalidateQueries({ queryKey: ['task', taskId] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(projectId, taskId) })
     },
   })
 

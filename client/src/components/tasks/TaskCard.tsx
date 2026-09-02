@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Fragment } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
+import { queryKeys } from '@/api/queryKeys'
 
 type TaskcardProps = {
   task: TaskProject
@@ -30,7 +31,7 @@ export default function TaskCard({ task, canEdit }: TaskcardProps) {
     },
     onSuccess: (data) => {
       toast.success(data)
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) })
     },
   })
 

@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { useLocation, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import ErrorMessage from '../ErrorMessage'
+import { queryKeys } from '@/api/queryKeys'
 
 export default function AddNoteForm() {
   const params = useParams()
@@ -33,7 +34,7 @@ export default function AddNoteForm() {
     },
     onSuccess: (data) => {
       toast.success(data)
-      queryClient.invalidateQueries({ queryKey: ['task', taskId] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(projectId, taskId) })
     },
   })
 

@@ -1,4 +1,6 @@
 import LoadingApp from '@/components/LoadingApp'
+import AsyncState from '@/components/AsyncState'
+import { normalizeApiError } from '@/api/errors'
 import Logo from '@/components/Logo'
 import NavMenu from '@/components/NavMenu'
 import { useAuth } from '@/hooks/useAuth'
@@ -7,10 +9,23 @@ import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
 export default function AppLayout() {
-  const { data, isError, isLoading } = useAuth()
+  const { data, error, isError, isLoading, refetch } = useAuth()
 
   if (isLoading) return <LoadingApp />
-  if (isError) return <Navigate to={'/auth/login'} />
+  if (isError && normalizeApiError(error).status === 401)
+    return <Navigate to={'/auth/login'} />
+  if (isError)
+    return (
+      <AsyncState
+        data={data}
+        error={error}
+        isLoading={false}
+        empty={null}
+        onRetry={() => void refetch()}
+      >
+        {() => null}
+      </AsyncState>
+    )
 
   if (data)
     return (

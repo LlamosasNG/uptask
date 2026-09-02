@@ -14,6 +14,7 @@ import { useForm } from 'react-hook-form'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import ErrorMessage from '../ErrorMessage'
+import { queryKeys } from '@/api/queryKeys'
 
 export default function DeleteProjectModal() {
   const initialValues: CheckPasswordForm = {
@@ -44,7 +45,7 @@ export default function DeleteProjectModal() {
     },
     onSuccess: (data) => {
       toast.success(data)
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all() })
       navigate(location.pathname, { replace: true })
     },
   })

@@ -1,5 +1,6 @@
 import { getFullProject } from '@/api/ProjectAPI'
 import LoadingApp from '@/components/LoadingApp'
+import AsyncState from '@/components/AsyncState'
 import AddTaskModal from '@/components/tasks/AddTaskModal'
 import EditTaskData from '@/components/tasks/EditTaskData'
 import TaskList from '@/components/tasks/TaskList'
@@ -9,6 +10,8 @@ import { isManager } from '@/utils/policies'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { normalizeApiError } from '@/api/errors'
+import { queryKeys } from '@/api/queryKeys'
 
 export default function ProjectDetailsView() {
   const navigate = useNavigate()
@@ -16,15 +19,28 @@ export default function ProjectDetailsView() {
   const projectId = params.projectId!
   const { data: user, isLoading: authLoading } = useAuth()
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['project', projectId],
+  const { data, error, isLoading, isError, refetch } = useQuery({
+    queryKey: queryKeys.projects.detail(projectId),
     queryFn: () => getFullProject(projectId),
     retry: false,
   })
   const canEdit = useMemo(() => data?.manager === user?._id, [data, user])
 
-  if (isLoading && authLoading) return <LoadingApp />
-  if (isError) return <Navigate to={'/404'} />
+  if (isLoading || authLoading) return <LoadingApp />
+  if (isError && normalizeApiError(error).status === 404)
+    return <Navigate to={'/404'} />
+  if (isError)
+    return (
+      <AsyncState
+        data={data}
+        error={error}
+        isLoading={false}
+        empty={null}
+        onRetry={() => void refetch()}
+      >
+        {() => null}
+      </AsyncState>
+    )
   if (data && user)
     return (
       <>

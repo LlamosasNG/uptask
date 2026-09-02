@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import TaskForm from "./TaskForm";
 import { updateTask } from "@/api/TaskAPI";
 import { toast } from "react-toastify";
+import { queryKeys } from '@/api/queryKeys';
 
 type EditTaskModalProps = {
   data: Task;
@@ -46,8 +47,8 @@ export default function EditTaskModal({
       toast.error(error.message);
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["task", taskId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(projectId, taskId) });
       toast.success(data);
       reset();
       navigate(location.pathname, { replace: true });

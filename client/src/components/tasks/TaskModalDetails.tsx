@@ -14,6 +14,7 @@ import { Fragment } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import NotesPanel from '../notes/NotesPanel'
+import { queryKeys } from '@/api/queryKeys'
 
 export default function TaskModalDetails() {
   const params = useParams()
@@ -25,7 +26,7 @@ export default function TaskModalDetails() {
   const show = taskId ? true : false
 
   const { data, isError, error } = useQuery({
-    queryKey: ['task', taskId],
+    queryKey: queryKeys.tasks.detail(projectId, taskId),
     queryFn: () => getTaskById({ projectId, taskId }),
     enabled: !!taskId,
     retry: false,
@@ -38,8 +39,8 @@ export default function TaskModalDetails() {
       toast.error(error.message)
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] })
-      queryClient.invalidateQueries({ queryKey: ['task', taskId] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(projectId, taskId) })
       toast.success(data)
     },
   })

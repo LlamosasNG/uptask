@@ -10,8 +10,10 @@ import {
 import { EllipsisVerticalIcon } from '@heroicons/react/20/solid'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Fragment } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
+import AsyncState from '@/components/AsyncState'
+import { queryKeys } from '@/api/queryKeys'
 
 export default function ProjectTeamView() {
   const navigate = useNavigate()
@@ -19,8 +21,8 @@ export default function ProjectTeamView() {
   const projectId = params.projectId!
   const queryClient = useQueryClient()
 
-  const { data, error, isLoading } = useQuery({
-    queryKey: ['projectTeam', projectId],
+  const { data, error, isLoading, refetch } = useQuery({
+    queryKey: queryKeys.projects.team(projectId),
     queryFn: () => getProjectTeam(projectId),
     retry: false,
   })
@@ -32,12 +34,12 @@ export default function ProjectTeamView() {
     },
     onSuccess: (data) => {
       toast.success(data)
-      queryClient.invalidateQueries({ queryKey: ['projectTeam'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.team(projectId) })
     },
   })
 
-  if (isLoading) return 'Cargando...'
-  if (error) return <Navigate to={'/404'} />
+  if (isLoading) return <AsyncState data={data} error={null} isLoading empty={null}>{() => null}</AsyncState>
+  if (error) return <AsyncState data={data} error={error} isLoading={false} empty={null} onRetry={() => void refetch()}>{() => null}</AsyncState>
   if (data)
     return (
       <>

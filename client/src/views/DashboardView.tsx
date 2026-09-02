@@ -1,5 +1,6 @@
 import { getProjects } from '@/api/ProjectAPI'
 import LoadingApp from '@/components/LoadingApp'
+import AsyncState from '@/components/AsyncState'
 import DeleteProjectModal from '@/components/projects/DeleteProjectModal'
 import { useAuth } from '@/hooks/useAuth'
 import { isManager } from '@/utils/policies'
@@ -8,17 +9,30 @@ import { EllipsisVerticalIcon } from '@heroicons/react/20/solid'
 import { useQuery } from '@tanstack/react-query'
 import { Fragment } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { queryKeys } from '@/api/queryKeys'
 
 export default function DashboardView() {
   const location = useLocation()
   const navigate = useNavigate()
   const { data: user, isLoading: authLoading } = useAuth()
-  const { data, isLoading } = useQuery({
-    queryKey: ['projects'],
+  const { data, error, isLoading, refetch } = useQuery({
+    queryKey: queryKeys.projects.all(),
     queryFn: getProjects,
   })
 
-  if (isLoading && authLoading) return <LoadingApp />
+  if (isLoading || authLoading) return <LoadingApp />
+  if (error)
+    return (
+      <AsyncState
+        data={data}
+        error={error}
+        isLoading={false}
+        empty={null}
+        onRetry={() => void refetch()}
+      >
+        {() => null}
+      </AsyncState>
+    )
   if (data && user)
     return (
       <>

@@ -3,6 +3,7 @@ import { TeamMember } from '@/types/index'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
+import { queryKeys } from '@/api/queryKeys'
 
 type SearchResultProps = {
   user: TeamMember
@@ -23,7 +24,7 @@ export default function SearchResult({ user, reset }: SearchResultProps) {
       toast.success(data)
       reset()
       navigate(location.pathname, { replace: true })
-      queryClient.invalidateQueries({ queryKey: ['projectTeam'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.team(projectId) })
     },
   })
 
