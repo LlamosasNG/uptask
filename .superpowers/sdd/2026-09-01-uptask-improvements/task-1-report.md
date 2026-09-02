@@ -51,3 +51,60 @@ Final verification:
 
 - `server/pnpm-lock.yaml` already contained a large user-owned dependency-refresh diff before this task. Adding test dependencies necessarily extended it, but its hunks cannot be safely separated from the pre-existing lockfile changes. It is left unstaged for the owner to reconcile.
 - Existing `AuthController` contains unrelated pre-existing `Promise.allSettled` uses. It was outside the task's listed controller scope and includes an existing user modification, so it remains untouched.
+
+## Fix round 1
+
+### Changed behavior
+
+- The task-only `server/pnpm-lock.yaml` is regenerated from committed Task 1 package metadata and now records Vitest, Supertest, `@types/supertest`, mongodb-memory-server, and their dependency snapshots without the unrelated user dependency refresh.
+- The test suite gives `MongoMemoryReplSet.create()` a 60-second `beforeAll` timeout in both integration files, allowing a clean environment to download its initial MongoDB binary.
+- Deleting a user who is not a member of the requested project now returns `404 NOT_FOUND`, rather than `409 CONFLICT`.
+
+### Test files
+
+- `server/tests/projectAuthorization.test.ts` adds the missing-project-member 404 regression and has a 60-second setup hook timeout.
+- `server/tests/projectValidation.test.ts` has a 60-second setup hook timeout.
+
+### Commands and exact output
+
+RED command: `pnpm test -- projectAuthorization.test.ts`
+
+```
+FAIL  tests/projectAuthorization.test.ts > project authorization > reports a missing project member as a 404 nested resource
+AssertionError: expected 409 to be 404 // Object.is equality
+- Expected
++ Received
+- 404
++ 409
+```
+
+GREEN command: `pnpm test -- projectAuthorization.test.ts projectValidation.test.ts && pnpm build`
+
+```
+Test Files  2 passed (2)
+Tests  11 passed (11)
+> uptask-backend@1.0.0 build /home/llamosasng/uptask/server
+> tsc
+```
+
+Lockfile generation and reproducibility commands:
+
+```
+pnpm install --lockfile-only --ignore-scripts --dir /tmp/tmp.lItyA2oVJT/server
+Done in 2.9s using pnpm v11.2.2
+pnpm install --frozen-lockfile --lockfile-only --ignore-scripts --dir /tmp/tmp.lItyA2oVJT/server
+Done in 327ms using pnpm v11.2.2
+```
+
+Staged-state reproducibility command:
+
+```
+pnpm install --frozen-lockfile --lockfile-only --ignore-scripts --dir /tmp/tmp.IcPsAvBGJt/server
+Done in 330ms using pnpm v11.2.2
+```
+
+Final staged-state reproducibility output:
+
+```
+Done in 326ms using pnpm v11.2.2
+```

@@ -45,7 +45,7 @@ async function projectFixture() {
 
 beforeAll(async () => {
   app = await startDatabase()
-})
+}, 60_000)
 
 afterEach(clearDatabase)
 afterAll(stopDatabase)
@@ -116,6 +116,17 @@ describe('project authorization', () => {
     expect(update.status).toBe(200)
     expect(addMember.status).toBe(200)
     expect((await Project.findById(project.id))?.team.map(String)).toContain(newMember.id)
+  })
+
+  it('reports a missing project member as a 404 nested resource', async () => {
+    const { manager, outsider, project } = await projectFixture()
+
+    const response = await request(app)
+      .delete(`/api/projects/${project.id}/team/${outsider.id}`)
+      .set(auth(manager._id))
+
+    expect(response.status).toBe(404)
+    expect(response.body.error.code).toBe('NOT_FOUND')
   })
 
   it('does not delete a note belonging to another task nested under this project', async () => {

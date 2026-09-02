@@ -26,7 +26,7 @@ async function fixture() {
   return { manager, project, task }
 }
 
-beforeAll(async () => { app = await startDatabase() })
+beforeAll(async () => { app = await startDatabase() }, 60_000)
 afterEach(clearDatabase)
 afterAll(stopDatabase)
 

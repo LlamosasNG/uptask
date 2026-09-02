@@ -27,7 +27,7 @@ export class TeamController {
   static removeMemberById: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
     const { userId } = req.params
     if (!req.project.team.some((team) => team.toString() === userId)) {
-      throw new HttpError(409, 'CONFLICT', 'El usuario no existe en este proyecto')
+      throw new HttpError(404, 'NOT_FOUND', 'El usuario no existe en este proyecto')
     }
     req.project.team = req.project.team.filter((teamMember) => teamMember.toString() !== userId)
     await req.project.save()
