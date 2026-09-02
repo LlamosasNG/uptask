@@ -15,6 +15,28 @@ import { handleInputErrors } from '../middleware/validation'
 
 const router: Router = Router()
 
+const taskPlanningValidators = [
+  body('assignee')
+    .optional({ nullable: true })
+    .isMongoId()
+    .withMessage('ID de usuario no válido')
+    .bail()
+    .custom((assignee, { req }) => {
+      const isManager = req.project?.manager.toString() === assignee
+      const isMember = req.project?.team.some((member) => member.toString() === assignee)
+      if (isManager || isMember) return true
+      throw new Error('El usuario asignado debe pertenecer al proyecto')
+    }),
+  body('dueDate')
+    .optional({ nullable: true })
+    .isISO8601({ strict: true, strictSeparator: true })
+    .withMessage('La fecha de vencimiento no es válida'),
+  body('priority')
+    .optional()
+    .isIn(['low', 'medium', 'high'])
+    .withMessage('La prioridad no es válida'),
+]
+
 /** Projects */
 router.use(authenticate)
 router.post(
@@ -73,6 +95,7 @@ router.post(
   requireProjectManager,
   body('name').notEmpty().withMessage('El nombre de la tarea es obligatorio'),
   body('description').notEmpty().withMessage('La descripción es obligatoria'),
+  taskPlanningValidators,
   handleInputErrors,
   TaskController.createTask
 )
@@ -98,6 +121,7 @@ router.put(
   param('taskId').isMongoId().withMessage('ID no válido'),
   body('name').notEmpty().withMessage('El nombre de la tarea es obligatorio'),
   body('description').notEmpty().withMessage('La descripción es obligatoria'),
+  taskPlanningValidators,
   handleInputErrors,
   TaskController.updateTask
 )

@@ -1,5 +1,7 @@
 import { Request, RequestHandler, Response } from 'express'
+import mongoose from 'mongoose'
 import Project from '../models/Project'
+import Task from '../models/Task'
 import User from '../models/User'
 import { HttpError } from '../errors/HttpError'
 import { asyncHandler } from '../middleware/error'
@@ -29,8 +31,20 @@ export class TeamController {
     if (!req.project.team.some((team) => team.toString() === userId)) {
       throw new HttpError(404, 'NOT_FOUND', 'El usuario no existe en este proyecto')
     }
-    req.project.team = req.project.team.filter((teamMember) => teamMember.toString() !== userId)
-    await req.project.save()
+    const session = await mongoose.startSession()
+    try {
+      await session.withTransaction(async () => {
+        req.project.team = req.project.team.filter((teamMember) => teamMember.toString() !== userId)
+        await Task.updateMany(
+          { project: req.project._id, assignee: userId },
+          { assignee: null },
+          { session }
+        )
+        await req.project.save({ session })
+      })
+    } finally {
+      await session.endSession()
+    }
     res.send('Usuario eliminado correctamente')
   })
 

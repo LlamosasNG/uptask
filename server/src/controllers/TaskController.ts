@@ -21,12 +21,15 @@ export class TaskController {
   })
 
   static getProjectTasks: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
-    const tasks = await Task.find({ project: req.project._id }).populate('project')
+    const tasks = await Task.find({ project: req.project._id })
+      .populate({ path: 'project' })
+      .populate({ path: 'assignee', select: '_id name' })
     res.json(tasks)
   })
 
   static getTaksById: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
     const task = await Task.findById(req.task._id)
+      .populate({ path: 'assignee', select: '_id name' })
       .populate({ path: 'completedBy.user', select: 'id name email' })
       .populate({ path: 'notes', populate: { path: 'createdBy', select: 'id name email' } })
     res.json(task)
@@ -35,6 +38,9 @@ export class TaskController {
   static updateTask: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
     req.task.name = req.body.name
     req.task.description = req.body.description
+    if ('assignee' in req.body) req.task.assignee = req.body.assignee
+    if ('dueDate' in req.body) req.task.dueDate = req.body.dueDate
+    if ('priority' in req.body) req.task.priority = req.body.priority
     await req.task.save()
     res.send('Tarea actualizada correctamente')
   })

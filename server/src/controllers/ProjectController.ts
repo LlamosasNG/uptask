@@ -22,7 +22,10 @@ export class ProjectController {
   })
 
   static getProjectById: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
-    const project = await Project.findById(req.project._id).populate('tasks')
+    const project = await Project.findById(req.project._id).populate({
+      path: 'tasks',
+      populate: { path: 'assignee', select: '_id name' },
+    })
     if (!project) throw new HttpError(404, 'NOT_FOUND', 'Proyecto no encontrado')
     res.json(project)
   })
