@@ -1,17 +1,31 @@
 import dotenv from 'dotenv'
 
-dotenv.config()
+dotenv.config({ quiet: true })
 
-function required(name: 'DATABASE_URL' | 'JWT_SECRET') {
-  const value = process.env[name]
+type EnvironmentInput = Record<string, string | undefined>
+
+function required(input: EnvironmentInput, name: string) {
+  const value = input[name]
   if (!value) {
     throw new Error(`Missing required environment variable: ${name}`)
   }
   return value
 }
 
-export const env = {
-  DATABASE_URL: required('DATABASE_URL'),
-  JWT_SECRET: required('JWT_SECRET'),
-  FRONTEND_URL: process.env.FRONTEND_URL,
+export function validateEnv(input: EnvironmentInput) {
+  const databaseUrl = required(input, 'DATABASE_URL')
+  const jwtSecret = required(input, 'JWT_SECRET')
+  const frontendUrl = input.FRONTEND_URL
+
+  if (input.NODE_ENV === 'production' && !frontendUrl) {
+    throw new Error('Missing required environment variable: FRONTEND_URL')
+  }
+
+  return {
+    DATABASE_URL: databaseUrl,
+    JWT_SECRET: jwtSecret,
+    FRONTEND_URL: frontendUrl,
+  }
 }
+
+export const env = validateEnv(process.env)

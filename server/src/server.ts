@@ -1,19 +1,22 @@
 import cors from 'cors'
 import express, { Express } from 'express'
-import morgan from 'morgan'
 import { corsConfig } from './config/cors'
 import './config/env'
 import { errorHandler } from './middleware/error'
 import { notFound } from './middleware/notFound'
+import { createRequestLogger } from './middleware/requestLogger'
 import authRoutes from './routes/authRoutes'
 import projectRoutes from './routes/projectRoutes'
 
 /* Crear servidor */
 const app: Express = express()
-app.use(cors(corsConfig))
+app.use(createRequestLogger())
 
-/* Loggin */
-app.use(morgan('dev'))
+app.get('/health', (_request, response) => {
+  response.status(200).json({ status: 'ok' })
+})
+
+app.use(cors(corsConfig))
 
 /* Leer datos de formularios */
 app.use(express.json())

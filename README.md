@@ -64,8 +64,8 @@ Sigue estos pasos para ejecutar el proyecto en tu entorno local.
 
 Asegúrate de tener instalado lo siguiente:
 
-- Node.js (v18 o superior)
-- npm (o tu gestor de paquetes preferido)
+- Node.js 22 (LTS)
+- pnpm 10.26.2 (puedes habilitarlo con Corepack)
 - MongoDB (local o una instancia en la nube como MongoDB Atlas)
 
 ### Instalación
@@ -80,8 +80,9 @@ Asegúrate de tener instalado lo siguiente:
 2. **Instala las dependencias del Backend:**
 
    ```bash
+   corepack enable
    cd server
-   npm install
+   pnpm install --frozen-lockfile
    ```
 
 3. **Instala las dependencias del Frontend:**
@@ -89,14 +90,19 @@ Asegúrate de tener instalado lo siguiente:
    ```bash
    # Desde la carpeta raíz 'uptask'
    cd client
-   npm install
+   pnpm install --frozen-lockfile
    ```
 
 ### Variables de Entorno
 
-Es necesario crear archivos `.env` tanto para el cliente como para el servidor. Puedes usar los archivos `.env.example` como plantilla si los creas.
+Es necesario crear archivos `.env` tanto para el cliente como para el servidor. Copia las plantillas incluidas y reemplaza únicamente los valores de ejemplo:
 
-**Frontend (`/client/.env`):**
+```bash
+cp client/.env.example client/.env.local
+cp server/.env.example server/.env
+```
+
+**Frontend (`/client/.env.local`):**
 
 ```env
 VITE_API_URL=http://localhost:8000/api
@@ -116,20 +122,38 @@ SMTP_USER=<TU_USUARIO_SMTP>
 SMTP_PASS=<TU_PASSWORD_SMTP>
 ```
 
+`DATABASE_URL` y `JWT_SECRET` son obligatorias en todos los entornos. En producción también se exige `FRONTEND_URL`. El servidor termina durante el arranque si falta alguna variable obligatoria; nunca uses los valores de ejemplo como secretos reales.
+
 ---
 
 ## 📜 Scripts Disponibles
 
 **Frontend (`/client`):**
 
-- `npm run dev`: Inicia el servidor de desarrollo de Vite.
-- `npm run build`: Compila la aplicación de React para producción.
-- `npm run lint`: Ejecuta ESLint para analizar el código.
+- `pnpm dev`: Inicia el servidor de desarrollo de Vite.
+- `pnpm test`: Ejecuta las pruebas con Vitest.
+- `pnpm lint`: Ejecuta ESLint para analizar el código.
+- `pnpm build`: Verifica TypeScript y compila la aplicación para producción.
 
 **Backend (`/server`):**
 
-- `npm run server`: Inicia el servidor de desarrollo con nodemon y ts-node.
-- `npm run server:api`: Inicia el servidor en modo API.
+- `pnpm dev`: Inicia el servidor de desarrollo con nodemon y ts-node.
+- `pnpm dev:api`: Inicia el servidor aceptando clientes API sin origen de navegador.
+- `pnpm test`: Ejecuta las pruebas de integración con Vitest y MongoDB en memoria.
+- `pnpm build`: Verifica y compila TypeScript.
+
+### Operación y verificación
+
+El endpoint público `GET /health` devuelve `200` con `{ "status": "ok" }` para comprobaciones de liveness. No consulta MongoDB ni expone configuración.
+
+Las peticiones se registran como JSON estructurado con fecha, método, ruta sin parámetros de consulta, estado y duración. Los logs no incluyen cuerpos, credenciales ni tokens y se desactivan durante las pruebas.
+
+El workflow de GitHub Actions en `.github/workflows/ci.yml` instala con los lockfiles congelados y ejecuta pruebas y builds del servidor, además de pruebas, lint y build del cliente. Para reproducirlo localmente:
+
+```bash
+(cd server && pnpm install --frozen-lockfile && pnpm test && pnpm build)
+(cd client && pnpm install --frozen-lockfile && pnpm test && pnpm lint && pnpm build)
+```
 
 ---
 

@@ -28,7 +28,6 @@ export const errorHandler = (
     })
   }
 
-  console.error(error)
   return res.status(500).json({
     error: { code: 'INTERNAL_SERVER_ERROR', message: 'Hubo un error' },
   })
