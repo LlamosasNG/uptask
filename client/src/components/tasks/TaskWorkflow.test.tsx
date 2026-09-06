@@ -696,6 +696,86 @@ it('starts the next serialized status writer without waiting for cache refetches
   expect(callsBeforeRefetchCompletion).toBe(2)
 })
 
+it('does not roll back a later status when an earlier successful invalidation rejects', async () => {
+  let statusCalls = 0
+  let resolveSecondStatus!: () => void
+  statusRequest = () => {
+    statusCalls += 1
+    if (statusCalls === 1) return Promise.resolve('Primer cambio guardado')
+    return new Promise<string>((resolve) => {
+      resolveSecondStatus = () => resolve('Segundo cambio guardado')
+    })
+  }
+  const rejectFirstInvalidation: ((error: Error) => void)[] = []
+  let invalidationCalls = 0
+  vi.spyOn(client, 'invalidateQueries').mockImplementation(() => {
+    invalidationCalls += 1
+    if (invalidationCalls <= 2)
+      return new Promise<void>((_, reject) => {
+        rejectFirstInvalidation.push(reject)
+      })
+    return Promise.resolve()
+  })
+  client.setQueryData(
+    queryKeys.tasks.detail('project', 'one'),
+    structuredClone(task),
+  )
+  const { result } = renderHook(
+    () => ({
+      board: useTaskStatus('project'),
+      details: useTaskStatus('project'),
+    }),
+    {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    },
+  )
+
+  act(() =>
+    result.current.board.mutate({
+      projectId: 'project',
+      taskId: 'one',
+      status: 'inProgress',
+    }),
+  )
+  await waitFor(() => expect(rejectFirstInvalidation).toHaveLength(2))
+  act(() =>
+    result.current.details.mutate({
+      projectId: 'project',
+      taskId: 'one',
+      status: 'completed',
+    }),
+  )
+  await waitFor(() => expect(statusCalls).toBe(2))
+  expect(
+    client.getQueryData<Project>(queryKeys.projects.detail('project'))!
+      .tasks[0].status,
+  ).toBe('completed')
+  expect(
+    client.getQueryData<Task>(queryKeys.tasks.detail('project', 'one'))!
+      .status,
+  ).toBe('completed')
+
+  await act(async () => {
+    rejectFirstInvalidation.forEach((reject) =>
+      reject(new Error('First refetch failed')),
+    )
+  })
+  await waitFor(() => expect(result.current.board.isPending).toBe(false))
+  await act(async () => resolveSecondStatus())
+  await waitFor(() => expect(result.current.details.isPending).toBe(false))
+
+  expect(
+    client.getQueryData<Project>(queryKeys.projects.detail('project'))!
+      .tasks[0].status,
+  ).toBe('completed')
+  expect(
+    client.getQueryData<Task>(queryKeys.tasks.detail('project', 'one'))!
+      .status,
+  ).toBe('completed')
+})
+
 it('releases the status writer when optimistic setup fails', async () => {
   const cancelQueries = vi.spyOn(client, 'cancelQueries')
   cancelQueries.mockRejectedValueOnce(new Error('Cancel failed'))

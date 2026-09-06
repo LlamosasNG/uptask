@@ -84,14 +84,14 @@ export function useTaskStatus(projectId: string) {
     },
     onSettled: (_data, _error, { taskId }, context) => {
       try {
-        return Promise.all([
+        return Promise.allSettled([
           queryClient.invalidateQueries({
             queryKey: queryKeys.projects.detail(projectId),
           }),
           queryClient.invalidateQueries({
             queryKey: queryKeys.tasks.detail(projectId, taskId),
           }),
-        ])
+        ]).then(() => undefined)
       } finally {
         context?.release()
       }
