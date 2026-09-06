@@ -98,6 +98,8 @@ export default function TaskList({
     setPriority('all')
     setOverdueOnly(false)
   }
+  const taskName = (id: string | number) =>
+    tasks.find((task) => task._id === String(id))?.name ?? 'la tarea'
 
   return (
     <section aria-label="Tareas del proyecto" className="space-y-6">
@@ -194,7 +196,8 @@ export default function TaskList({
         <h2 className="text-2xl font-bold text-slate-900">Tareas</h2>
         <p className="mt-2 text-sm text-slate-600">
           Cambia el estado desde cada tarjeta o arrastra con el control Mover.
-          Desplázate horizontalmente para ver todos los estados.
+          En pantallas grandes, desplázate horizontalmente para ver todos los
+          estados.
         </p>
       </div>
       <p aria-live="polite" className="text-sm text-slate-600">
@@ -223,6 +226,20 @@ export default function TaskList({
         sensors={sensors}
         onDragEnd={handleDragEnd}
         accessibility={{
+          announcements: {
+            onDragStart: ({ active }) =>
+              `Has tomado la tarea ${taskName(active.id)}.`,
+            onDragOver: ({ active, over }) =>
+              over && statusTranslations[String(over.id)]
+                ? `${taskName(active.id)} sobre ${statusTranslations[String(over.id)]}.`
+                : `${taskName(active.id)} fuera de las zonas de destino.`,
+            onDragEnd: ({ active, over }) =>
+              over && statusTranslations[String(over.id)]
+                ? `Has soltado ${taskName(active.id)} en ${statusTranslations[String(over.id)]}.`
+                : `Has soltado ${taskName(active.id)} sin cambiar su estado.`,
+            onDragCancel: ({ active }) =>
+              `Movimiento de ${taskName(active.id)} cancelado.`,
+          },
           screenReaderInstructions: {
             draggable:
               'Para mover una tarea, pulsa espacio. Usa las flechas para moverla, espacio para soltar o Escape para cancelar. También puedes usar el selector de estado.',
@@ -234,7 +251,7 @@ export default function TaskList({
           role="region"
           aria-label="Tablero por estado"
           tabIndex={0}
-          className="flex gap-4 overflow-x-auto pb-6 snap-x snap-proximity"
+          className="flex flex-col gap-4 pb-6 lg:flex-row lg:overflow-x-auto lg:snap-x lg:snap-proximity"
         >
           {taskStatusSchema.options.map((column) => {
             const columnTasks = filtered.filter(
@@ -244,7 +261,7 @@ export default function TaskList({
               <section
                 key={column}
                 aria-label={statusTranslations[column]}
-                className="w-72 min-w-72 lg:min-w-64 flex-1 snap-start rounded-2xl border border-slate-200 bg-slate-100 p-3"
+                className="w-full min-w-0 lg:w-72 lg:min-w-64 lg:flex-1 lg:snap-start rounded-2xl border border-slate-200 bg-slate-100 p-3"
               >
                 <h3 className="flex justify-between gap-2 p-2 font-semibold text-slate-800">
                   {statusTranslations[column]}

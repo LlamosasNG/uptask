@@ -2,6 +2,7 @@ import {
   act,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
   within,
@@ -25,6 +26,8 @@ import TaskModalDetails from './TaskModalDetails'
 import AppLayout from '@/layouts/AppLayout'
 import ProjectDetailsView from '@/views/projects/ProjectDetailsView'
 import LoginView from '@/views/auth/LoginView'
+import ProjectTeamView from '@/views/projects/ProjectTeamView'
+import { useTaskStatus } from '@/hooks/useTaskStatus'
 
 // The spinner package's styled-components export cannot load in jsdom; no loading behavior is replaced.
 vi.mock('react-loader-spinner', () => ({ ProgressBar: () => <span /> }))
@@ -84,6 +87,15 @@ let statusRequest: (() => Promise<unknown>) | undefined
 let client: QueryClient
 
 beforeEach(() => {
+  // jsdom has no layout observer; menu tests exercise permissions and focus, not geometry.
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  )
   requests = []
   statusRequest = undefined
   client = new QueryClient({
@@ -120,6 +132,8 @@ beforeEach(() => {
   }) satisfies AxiosAdapter
 })
 afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
   api.defaults.adapter = originalAdapter
   client.clear()
 })
@@ -254,11 +268,40 @@ describe('task board workflow', () => {
     handle.focus()
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' })
     await waitFor(() => expect(handle).toHaveAttribute('aria-pressed', 'true'))
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Has tomado la tarea Diseño',
+    )
     fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' })
     await waitFor(() =>
       expect(handle).not.toHaveAttribute('aria-pressed', 'true'),
     )
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Movimiento de Diseño cancelado',
+    )
     expect(requests).toHaveLength(0)
+  })
+
+  it('stacks full-width workflow groups on small screens and switches to desktop columns', () => {
+    mount(<Board />)
+    const board = screen.getByRole('region', { name: 'Tablero por estado' })
+    // Tailwind breakpoint contract: jsdom cannot compute media-query layout.
+    expect(board).toHaveClass('flex-col', 'lg:flex-row', 'lg:overflow-x-auto')
+    for (const name of [
+      'Pendiente',
+      'En espera',
+      'En progreso',
+      'En revisión',
+      'Completado',
+    ]) {
+      const column = within(board).getByRole('region', { name })
+      expect(column).toHaveClass(
+        'w-full',
+        'min-w-0',
+        'lg:w-72',
+        'lg:min-w-64',
+      )
+      expect(column).not.toHaveClass('min-w-72')
+    }
   })
 
   // Catches mutation-before-snapshot, missing optimistic cache update, rollback, or settle invalidation.
@@ -522,4 +565,205 @@ it('confirms note deletion and does not send a request on cancel', async () => {
       data: undefined,
     }),
   )
+})
+
+it('serializes independent status writers and restores both caches after board then detail failures', async () => {
+  const rejects: ((error: Error) => void)[] = []
+  statusRequest = () =>
+    new Promise((_, reject) => {
+      rejects.push(reject)
+    })
+  client.setQueryData(
+    queryKeys.tasks.detail('project', 'one'),
+    structuredClone(task),
+  )
+  const { result } = renderHook(
+    () => ({
+      board: useTaskStatus('project'),
+      details: useTaskStatus('project'),
+    }),
+    {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    },
+  )
+
+  act(() =>
+    result.current.board.mutate({
+      projectId: 'project',
+      taskId: 'one',
+      status: 'inProgress',
+    }),
+  )
+  await waitFor(() => expect(rejects).toHaveLength(1))
+  expect(
+    client.getQueryData<Project>(queryKeys.projects.detail('project'))!
+      .tasks[0].status,
+  ).toBe('inProgress')
+  expect(
+    client.getQueryData<Task>(queryKeys.tasks.detail('project', 'one'))!
+      .status,
+  ).toBe('inProgress')
+  act(() =>
+    result.current.details.mutate({
+      projectId: 'project',
+      taskId: 'one',
+      status: 'completed',
+    }),
+  )
+  await act(async () => {
+    await Promise.resolve()
+  })
+  const requestsBeforeFirstFailure = requests.length
+  await act(async () => rejects[0](new Error('Board failed')))
+  await waitFor(() => expect(rejects).toHaveLength(2))
+  const secondOptimisticProjectStatus = client.getQueryData<Project>(
+    queryKeys.projects.detail('project'),
+  )!.tasks[0].status
+  const secondOptimisticDetailStatus = client.getQueryData<Task>(
+    queryKeys.tasks.detail('project', 'one'),
+  )!.status
+  await act(async () => rejects[1](new Error('Details failed')))
+  await waitFor(() =>
+    expect(
+      result.current.board.isPending || result.current.details.isPending,
+    ).toBe(false),
+  )
+  expect(
+    client.getQueryData(queryKeys.projects.detail('project')),
+  ).toEqual(project)
+  expect(
+    client.getQueryData(queryKeys.tasks.detail('project', 'one')),
+  ).toEqual(task)
+  expect(secondOptimisticProjectStatus).toBe('completed')
+  expect(secondOptimisticDetailStatus).toBe('completed')
+  expect(requestsBeforeFirstFailure).toBe(1)
+})
+
+it('starts the next serialized status writer without waiting for cache refetches', async () => {
+  let statusCalls = 0
+  statusRequest = async () => {
+    statusCalls += 1
+    return 'Guardado'
+  }
+  const pendingInvalidations: (() => void)[] = []
+  const invalidate = vi
+    .spyOn(client, 'invalidateQueries')
+    .mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          pendingInvalidations.push(resolve)
+        }),
+    )
+  const { result } = renderHook(
+    () => ({
+      board: useTaskStatus('project'),
+      details: useTaskStatus('project'),
+    }),
+    {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    },
+  )
+
+  act(() =>
+    result.current.board.mutate({
+      projectId: 'project',
+      taskId: 'one',
+      status: 'inProgress',
+    }),
+  )
+  await waitFor(() => expect(pendingInvalidations).toHaveLength(2))
+  act(() =>
+    result.current.details.mutate({
+      projectId: 'project',
+      taskId: 'one',
+      status: 'completed',
+    }),
+  )
+  await act(async () => {
+    await Promise.resolve()
+  })
+  const callsBeforeRefetchCompletion = statusCalls
+
+  invalidate.mockResolvedValue(undefined)
+  await act(async () => {
+    pendingInvalidations.forEach((resolve) => resolve())
+  })
+
+  expect(callsBeforeRefetchCompletion).toBe(2)
+})
+
+it('releases the status writer when optimistic setup fails', async () => {
+  const cancelQueries = vi.spyOn(client, 'cancelQueries')
+  cancelQueries.mockRejectedValueOnce(new Error('Cancel failed'))
+  statusRequest = async () => 'Guardado'
+  const { result } = renderHook(
+    () => ({
+      board: useTaskStatus('project'),
+      details: useTaskStatus('project'),
+    }),
+    {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    },
+  )
+
+  act(() =>
+    result.current.board.mutate({
+      projectId: 'project',
+      taskId: 'one',
+      status: 'inProgress',
+    }),
+  )
+  act(() =>
+    result.current.details.mutate({
+      projectId: 'project',
+      taskId: 'one',
+      status: 'completed',
+    }),
+  )
+
+  await waitFor(() =>
+    expect(requests).toContainEqual({
+      method: 'post',
+      url: '/projects/project/tasks/one/status',
+      data: { status: 'completed' },
+    }),
+  )
+})
+
+it('allows managers to open the team management modal and removal menu', async () => {
+  mount(<ProjectTeamView />)
+  fireEvent.click(screen.getByRole('button', { name: 'Opciones de Luis' }))
+  expect(
+    await screen.findByRole('menuitem', { name: 'Eliminar del Proyecto' }),
+  ).toBeInTheDocument()
+  fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape', code: 'Escape' })
+  fireEvent.click(screen.getByRole('button', { name: 'Agregar colaboradores' }))
+  expect(
+    await screen.findByRole('dialog', {
+      name: 'Agregar Integrante al equipo',
+    }),
+  ).toBeInTheDocument()
+})
+
+it('retains read-only team access for members and ignores direct add-member URLs', () => {
+  client.setQueryData(queryKeys.auth.user(), member)
+  mount(<ProjectTeamView />, '?addMember=true')
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(screen.getByText('Luis')).toBeInTheDocument()
+  expect(screen.getByText('luis@example.com')).toBeInTheDocument()
+  expect(
+    screen.queryByRole('button', { name: 'Agregar colaboradores' }),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole('button', { name: 'Opciones de Luis' }),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.getByRole('link', { name: 'Volver al proyecto' }),
+  ).toBeInTheDocument()
 })

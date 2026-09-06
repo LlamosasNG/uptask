@@ -24,6 +24,8 @@ import { normalizeApiError } from '@/api/errors'
 import PageHeader from '@/components/ui/PageHeader'
 import EmptyState from '@/components/ui/EmptyState'
 import Button from '@/components/ui/Button'
+import { useAuth } from '@/hooks/useAuth'
+import { getFullProject } from '@/api/ProjectAPI'
 
 export default function ProjectTeamView() {
   const navigate = useNavigate()
@@ -31,6 +33,13 @@ export default function ProjectTeamView() {
   const params = useParams()
   const projectId = params.projectId!
   const queryClient = useQueryClient()
+  const { data: user } = useAuth()
+  const { data: project } = useQuery({
+    queryKey: queryKeys.projects.detail(projectId),
+    queryFn: () => getFullProject(projectId),
+    retry: false,
+  })
+  const canManage = !!user && project?.manager === user._id
 
   const { data, error, isLoading, refetch } = useQuery({
     queryKey: queryKeys.projects.team(projectId),
@@ -75,15 +84,23 @@ export default function ProjectTeamView() {
     return (
       <>
         <PageHeader
-          title="Administrar Equipo"
-          description="Administra el equipo de trabajo de este proyecto"
+          title={canManage ? 'Administrar Equipo' : 'Equipo del proyecto'}
+          description={
+            canManage
+              ? 'Administra el equipo de trabajo de este proyecto'
+              : 'Consulta los colaboradores de este proyecto'
+          }
           actions={
             <>
-              <Button
-                onClick={() => navigate(location.pathname + '?addMember=true')}
-              >
-                Agregar colaboradores
-              </Button>
+              {canManage && (
+                <Button
+                  onClick={() =>
+                    navigate(location.pathname + '?addMember=true')
+                  }
+                >
+                  Agregar colaboradores
+                </Button>
+              )}
               <Link to={`/projects/${projectId}`} className="btn btn-secondary">
                 Volver al proyecto
               </Link>
@@ -113,50 +130,58 @@ export default function ProjectTeamView() {
                     </p>
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-x-6">
-                  <Menu as="div" className="relative flex-none">
-                    <MenuButton className="-m-2.5 block p-2.5 text-gray-500 hover:text-gray-900">
-                      <span className="sr-only">Opciones de {member.name}</span>
-                      <EllipsisVerticalIcon
-                        className="h-9 w-9 cursor-pointer"
-                        aria-hidden="true"
-                      />
-                    </MenuButton>
-                    <Transition
-                      as={Fragment}
-                      enter="transition ease-out duration-100"
-                      enterFrom="transform opacity-0 scale-95"
-                      enterTo="transform opacity-100 scale-100"
-                      leave="transition ease-in duration-75"
-                      leaveFrom="transform opacity-100 scale-100"
-                      leaveTo="transform opacity-0 scale-95"
-                    >
-                      <MenuItems className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none">
-                        <MenuItem>
-                          <button
-                            type="button"
-                            className="block px-3 py-1 text-sm leading-6 text-red-500 cursor-pointer"
-                            onClick={() => {
-                              mutate({ projectId, id: member._id })
-                            }}
-                          >
-                            Eliminar del Proyecto
-                          </button>
-                        </MenuItem>
-                      </MenuItems>
-                    </Transition>
-                  </Menu>
-                </div>
+                {canManage && (
+                  <div className="flex shrink-0 items-center gap-x-6">
+                    <Menu as="div" className="relative flex-none">
+                      <MenuButton className="-m-2.5 block p-2.5 text-gray-500 hover:text-gray-900">
+                        <span className="sr-only">
+                          Opciones de {member.name}
+                        </span>
+                        <EllipsisVerticalIcon
+                          className="h-9 w-9 cursor-pointer"
+                          aria-hidden="true"
+                        />
+                      </MenuButton>
+                      <Transition
+                        as={Fragment}
+                        enter="transition ease-out duration-100"
+                        enterFrom="transform opacity-0 scale-95"
+                        enterTo="transform opacity-100 scale-100"
+                        leave="transition ease-in duration-75"
+                        leaveFrom="transform opacity-100 scale-100"
+                        leaveTo="transform opacity-0 scale-95"
+                      >
+                        <MenuItems className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none">
+                          <MenuItem>
+                            <button
+                              type="button"
+                              className="block px-3 py-1 text-sm leading-6 text-red-500 cursor-pointer"
+                              onClick={() => {
+                                mutate({ projectId, id: member._id })
+                              }}
+                            >
+                              Eliminar del Proyecto
+                            </button>
+                          </MenuItem>
+                        </MenuItems>
+                      </Transition>
+                    </Menu>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
         ) : (
           <EmptyState
             title="No hay miembros en este equipo"
-            description="Agrega colaboradores para compartir el trabajo del proyecto."
+            description={
+              canManage
+                ? 'Agrega colaboradores para compartir el trabajo del proyecto.'
+                : 'Aún no se han agregado colaboradores.'
+            }
           />
         )}
-        <AddMemberModal />
+        {canManage && <AddMemberModal />}
       </>
     )
 }
