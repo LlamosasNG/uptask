@@ -85,4 +85,11 @@ describe('ApiError', () => {
   it('identifies retryable network failures', () => {
     expect(new ApiError({ status: 0, code: 'NETWORK_ERROR', message: 'Sin conexión' }).isRetryable).toBe(true)
   })
+
+  it.each([
+    new ApiError({ status: 0, code: 'SCHEMA_MISMATCH', message: 'Formato inválido' }),
+    new ApiError({ status: 0, code: 'UNKNOWN_ERROR', message: 'Error inesperado' }),
+  ])('does not offer retry for non-network status-zero errors', (error) => {
+    expect(error.isRetryable).toBe(false)
+  })
 })

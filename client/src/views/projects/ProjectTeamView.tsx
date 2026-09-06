@@ -10,10 +10,11 @@ import {
 import { EllipsisVerticalIcon } from '@heroicons/react/20/solid'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Fragment } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import AsyncState from '@/components/AsyncState'
 import { queryKeys } from '@/api/queryKeys'
+import { normalizeApiError } from '@/api/errors'
 
 export default function ProjectTeamView() {
   const navigate = useNavigate()
@@ -39,6 +40,7 @@ export default function ProjectTeamView() {
   })
 
   if (isLoading) return <AsyncState data={data} error={null} isLoading empty={null}>{() => null}</AsyncState>
+  if (error && normalizeApiError(error).status === 404) return <Navigate to="/404" />
   if (error) return <AsyncState data={data} error={error} isLoading={false} empty={null} onRetry={() => void refetch()}>{() => null}</AsyncState>
   if (data)
     return (

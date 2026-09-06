@@ -1,17 +1,42 @@
-import { QueryClient } from '@tanstack/react-query'
+import { QueryClient, QueryObserver } from '@tanstack/react-query'
 import { AxiosError, type InternalAxiosRequestConfig } from 'axios'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { queryKeys } from '@/api/queryKeys'
 import api from './axios'
-import { AUTH_TOKEN_KEY, bindAuthCache } from './authSession'
+import { AUTH_TOKEN_KEY, bindAuthCache, endAuthSession } from './authSession'
 
 describe('expired authentication', () => {
   afterEach(() => {
     localStorage.clear()
   })
 
+  it('moves an active user observer to a settled signed-out state on manual logout', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const unsubscribeSession = bindAuthCache(queryClient)
+    const observer = new QueryObserver(queryClient, {
+      queryKey: queryKeys.auth.user(),
+      queryFn: () => new Promise(() => undefined),
+    })
+    const unsubscribeObserver = observer.subscribe(() => undefined)
+    localStorage.setItem(AUTH_TOKEN_KEY, 'active-token')
+
+    await endAuthSession()
+
+    await vi.waitFor(() => {
+      expect(queryClient.getQueryData(queryKeys.auth.user())).toBeNull()
+      expect(observer.getCurrentResult()).toMatchObject({
+        data: null,
+        isFetching: false,
+        status: 'success',
+      })
+    })
+
+    unsubscribeObserver()
+    unsubscribeSession()
+  })
+
   it('clears the token and cached user after a 401 response', async () => {
-    const queryClient = new QueryClient()
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const unsubscribe = bindAuthCache(queryClient)
     queryClient.setQueryData(queryKeys.auth.user(), { _id: 'user-1', name: 'Ana' })
     localStorage.setItem(AUTH_TOKEN_KEY, 'expired-token')
@@ -27,15 +52,25 @@ describe('expired authentication', () => {
       )
     }
 
-    await expect(api.get('/auth/user')).rejects.toMatchObject({
-      status: 401,
-      code: 'UNAUTHENTICATED',
+    const observer = new QueryObserver(queryClient, {
+      queryKey: queryKeys.auth.user(),
+      queryFn: () => api.get('/auth/user'),
+    })
+    const unsubscribeObserver = observer.subscribe(() => undefined)
+
+    await vi.waitFor(() => {
+      expect(queryClient.getQueryData(queryKeys.auth.user())).toBeNull()
+      expect(observer.getCurrentResult().isFetching).toBe(false)
+      expect(observer.getCurrentResult()).toMatchObject({
+        data: null,
+        status: 'success',
+      })
     })
 
     expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBeNull()
-    expect(queryClient.getQueryData(queryKeys.auth.user())).toBeUndefined()
 
     api.defaults.adapter = previousAdapter
+    unsubscribeObserver()
     unsubscribe()
   })
 })

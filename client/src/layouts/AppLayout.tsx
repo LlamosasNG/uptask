@@ -27,9 +27,10 @@ export default function AppLayout() {
       </AsyncState>
     )
 
-  if (data)
-    return (
-      <>
+  if (!data) return <Navigate to={'/auth/login'} />
+
+  return (
+    <>
         <header className="bg-gray-800 py-5">
           <div className="max-w-screen-2xl mx-auto flex flex-col lg:flex-row justify-between items-center">
             <div className="w-64">
@@ -51,6 +52,6 @@ export default function AppLayout() {
           </p>
         </footer>
         <ToastContainer pauseOnHover={false} pauseOnFocusLoss={false} />
-      </>
-    )
+    </>
+  )
 }

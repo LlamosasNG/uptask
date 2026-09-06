@@ -14,8 +14,8 @@ type NavMenuProps = {
   name: User['name']
 }
 export default function NavMenu({ name }: NavMenuProps) {
-  const logout = () => {
-    endAuthSession()
+  const logout = async () => {
+    await endAuthSession()
   }
 
   return (

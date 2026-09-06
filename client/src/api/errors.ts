@@ -25,7 +25,7 @@ export class ApiError extends Error {
   }
 
   get isRetryable() {
-    return this.status === 0 || this.status >= 500
+    return this.code === 'NETWORK_ERROR' || this.status >= 500
   }
 }
 

@@ -1,12 +1,12 @@
 import api from '@/lib/axios'
 import { parseResponse } from './errors'
-import { Project, TeamMember, TeamMemberForm, teamMembersSchema } from '../types'
+import { Project, TeamMember, TeamMemberForm, teamMemberSchema, teamMembersSchema } from '../types'
 
 type TeamAPIProps = { projectId: Project['_id']; formData: TeamMemberForm; id: TeamMember['_id'] }
 
 export async function findMemberById({ projectId, formData }: Pick<TeamAPIProps, 'projectId' | 'formData'>) {
   const { data } = await api.post(`/projects/${projectId}/team/find`, formData)
-  return data
+  return parseResponse(teamMemberSchema, data)
 }
 
 export async function addMemberToProject({ projectId, id }: Pick<TeamAPIProps, 'projectId' | 'id'>) {

@@ -3,16 +3,19 @@ import { queryKeys } from '@/api/queryKeys'
 
 export const AUTH_TOKEN_KEY = 'AUTH_TOKEN'
 
-const listeners = new Set<() => void>()
+const listeners = new Set<() => Promise<void>>()
 
-export function endAuthSession() {
+export async function endAuthSession() {
   localStorage.removeItem(AUTH_TOKEN_KEY)
-  listeners.forEach((listener) => listener())
+  await Promise.all(Array.from(listeners, (listener) => listener()))
 }
 
 export function bindAuthCache(queryClient: QueryClient) {
-  const clearUser = () => {
-    queryClient.removeQueries({ queryKey: queryKeys.auth.user() })
+  const clearUser = async () => {
+    queryClient.setQueryData(queryKeys.auth.user(), null)
+    await queryClient.cancelQueries(
+      { queryKey: queryKeys.auth.user(), exact: true }
+    )
   }
 
   listeners.add(clearUser)

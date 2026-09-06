@@ -15,6 +15,8 @@ import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import NotesPanel from '../notes/NotesPanel'
 import { queryKeys } from '@/api/queryKeys'
+import AsyncState from '@/components/AsyncState'
+import { normalizeApiError } from '@/api/errors'
 
 export default function TaskModalDetails() {
   const params = useParams()
@@ -25,7 +27,7 @@ export default function TaskModalDetails() {
   const taskId = queryParams.get('viewTask')!
   const show = taskId ? true : false
 
-  const { data, isError, error } = useQuery({
+  const { data, isError, error, isLoading, refetch } = useQuery({
     queryKey: queryKeys.tasks.detail(projectId, taskId),
     queryFn: () => getTaskById({ projectId, taskId }),
     enabled: !!taskId,
@@ -57,10 +59,18 @@ export default function TaskModalDetails() {
     mutate(data)
   }
 
-  if (isError) {
-    toast.error(error.message, { toastId: 'error' })
+  if (isLoading)
+    return <AsyncState data={data} error={null} isLoading empty={null}>{() => null}</AsyncState>
+
+  if (isError && normalizeApiError(error).status === 404)
     return <Navigate to={`/projects/${projectId}`} />
-  }
+
+  if (isError)
+    return (
+      <AsyncState data={data} error={error} isLoading={false} empty={null} onRetry={() => void refetch()}>
+        {() => null}
+      </AsyncState>
+    )
 
   if (data)
     return (

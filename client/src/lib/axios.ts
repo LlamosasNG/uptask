@@ -16,9 +16,9 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error: unknown) => {
+  async (error: unknown) => {
     const apiError = normalizeApiError(error)
-    if (apiError.status === 401) endAuthSession()
+    if (apiError.status === 401) await endAuthSession()
     return Promise.reject(apiError)
   }
 )
