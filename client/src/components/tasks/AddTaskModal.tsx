@@ -14,6 +14,7 @@ import { TaskFormData } from "@/types/index";
 import { createTask } from "@/api/TaskAPI";
 import { toast } from "react-toastify";
 import { queryKeys } from '@/api/queryKeys';
+import Button from '../ui/Button';
 
 export default function AddTaskModal() {
   const navigate = useNavigate();
@@ -28,17 +29,21 @@ export default function AddTaskModal() {
   const initialValues: TaskFormData = {
     name: "",
     description: "",
+    assignee: null,
+    dueDate: null,
+    priority: 'medium',
   };
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors },
   } = useForm<TaskFormData>({ defaultValues: initialValues });
 
   const queryClient = useQueryClient();
-  const { mutate } = useMutation({
+  const { mutate, isPending } = useMutation({
     mutationFn: createTask,
     onError: (error) => {
       toast.error(error.message);
@@ -92,27 +97,26 @@ export default function AddTaskModal() {
                 leaveFrom="opacity-100 scale-100"
                 leaveTo="opacity-0 scale-95"
               >
-                <DialogPanel className="w-full max-w-4xl transform overflow-hidden rounded-2xl bg-white text-left align-middle shadow-xl transition-all p-16">
-                  <DialogTitle as="h3" className="font-black text-4xl  my-5">
+                <DialogPanel className="w-full max-w-2xl transform rounded-2xl bg-white p-5 text-left shadow-xl transition-all sm:p-8">
+                  <DialogTitle as="h3" className="text-2xl font-bold text-slate-900">
                     Nueva Tarea
                   </DialogTitle>
 
-                  <p className="text-xl font-bold">
+                  <p className="mt-3 text-slate-600">
                     Llena el formulario y crea {""}
-                    <span className="text-fuchsia-600">una tarea</span>
+                    <span>una tarea</span>
                   </p>
 
                   <form
-                    className="mt-10 space-y-3"
+                    className="mt-6 space-y-6"
                     noValidate
                     onSubmit={handleSubmit(handleForm)}
                   >
-                    <TaskForm register={register} errors={errors} />
-                    <input
-                      type="submit"
-                      value="Guardar tarea"
-                      className="bg-fuchsia-600 hover:bg-fuchsia-700 w-full p-3 text-white uppercase font-bold cursor-pointer transition-colors rounded-lg"
-                    />
+                    <TaskForm register={register} errors={errors} control={control} />
+                    <div className="flex flex-wrap justify-end gap-3">
+                      <Button variant="secondary" onClick={() => navigate(location.pathname, { replace: true })}>Cancelar</Button>
+                      <Button type="submit" disabled={isPending}>{isPending ? 'Guardando…' : 'Guardar tarea'}</Button>
+                    </div>
                   </form>
                 </DialogPanel>
               </TransitionChild>

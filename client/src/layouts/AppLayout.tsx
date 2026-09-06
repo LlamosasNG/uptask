@@ -31,10 +31,11 @@ export default function AppLayout() {
 
   return (
     <>
-        <header className="bg-gray-800 py-5">
-          <div className="max-w-screen-2xl mx-auto flex flex-col lg:flex-row justify-between items-center">
-            <div className="w-64">
-              <Link to={'/'}>
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-white focus:p-3">Saltar al contenido</a>
+        <header className="bg-slate-900 py-4">
+          <div className="mx-auto flex w-full max-w-screen-2xl items-center justify-between gap-4 px-4 sm:px-8">
+            <div className="w-40 sm:w-48">
+              <Link to={'/'} aria-label="UpTask: mis proyectos">
                 <Logo />
               </Link>
             </div>
@@ -42,11 +43,11 @@ export default function AppLayout() {
           </div>
         </header>
 
-        <section className="max-w-screen-2xl mx-auto mt-10 p-5">
+        <main id="main-content" tabIndex={-1} className="mx-auto min-h-[70vh] w-full max-w-screen-2xl px-4 py-8 sm:px-8 sm:py-10">
           <Outlet />
-        </section>
+        </main>
 
-        <footer className="py-5">
+        <footer className="px-4 py-6 text-sm text-slate-500">
           <p className="text-center">
             Todos los derechos reservados {new Date().getFullYear()}
           </p>

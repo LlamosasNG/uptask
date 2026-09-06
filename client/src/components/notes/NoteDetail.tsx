@@ -7,6 +7,9 @@ import { useLocation, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import LoadingApp from '../LoadingApp'
 import { queryKeys } from '@/api/queryKeys'
+import { useState } from 'react'
+import Button from '../ui/Button'
+import ConfirmDialog from '../ui/ConfirmDialog'
 
 type NoteDetailProps = {
   note: Note
@@ -21,12 +24,14 @@ export default function NoteDetail({ note }: NoteDetailProps) {
 
   const { data, isLoading } = useAuth()
   const canDelete = data?._id === note.createdBy._id
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const queryClient = useQueryClient()
-  const { mutate } = useMutation({
+  const { mutate, isPending } = useMutation({
     mutationFn: deleteNote,
     onError: (error) => toast.error(error.message),
     onSuccess: (data) => {
+      setConfirmDelete(false)
       toast.success(data)
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(projectId, taskId) })
     },
@@ -34,8 +39,8 @@ export default function NoteDetail({ note }: NoteDetailProps) {
 
   if (isLoading) return <LoadingApp />
   return (
-    <div className="p-3 flex justify-between items-center">
-      <div>
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <div className="min-w-0 break-words">
         <p>
           {note.content} por:{' '}
           <span className="font-bold">{note.createdBy.name}</span>
@@ -44,14 +49,14 @@ export default function NoteDetail({ note }: NoteDetailProps) {
       </div>
 
       {canDelete && (
-        <button
-          type="button"
-          className="bg-red-400 hover:bg-red-500 p-2 ml-2 text-xs text-white font-bold cursor-pointer transition-colors rounded-xs"
-          onClick={() => mutate({ projectId, taskId, noteId: note._id })}
+        <Button
+          variant="danger"
+          onClick={() => setConfirmDelete(true)}
         >
           Eliminar
-        </button>
+        </Button>
       )}
+      <ConfirmDialog open={confirmDelete} title="Eliminar nota" description={`Se eliminará la nota “${note.content}”. Esta acción no se puede deshacer.`} pending={isPending} onCancel={() => setConfirmDelete(false)} onConfirm={() => mutate({ projectId, taskId, noteId: note._id })} />
     </div>
   )
 }

@@ -1,6 +1,5 @@
-import { getTaskById, updateStatus } from '@/api/TaskAPI'
+import { getTaskById } from '@/api/TaskAPI'
 import { statusTranslations } from '@/locales/es'
-import { TaskStatus } from '@/types/index'
 import { formatDate } from '@/utils/utils'
 import {
   Dialog,
@@ -9,14 +8,16 @@ import {
   Transition,
   TransitionChild,
 } from '@headlessui/react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Fragment } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { toast } from 'react-toastify'
 import NotesPanel from '../notes/NotesPanel'
 import { queryKeys } from '@/api/queryKeys'
 import AsyncState from '@/components/AsyncState'
 import { normalizeApiError } from '@/api/errors'
+import { useTaskStatus } from '@/hooks/useTaskStatus'
+import TaskStatusControl from './TaskStatusControl'
+import Button from '../ui/Button'
 
 export default function TaskModalDetails() {
   const params = useParams()
@@ -34,40 +35,27 @@ export default function TaskModalDetails() {
     retry: false,
   })
 
-  const queryClient = useQueryClient()
-  const { mutate } = useMutation({
-    mutationFn: updateStatus,
-    onError: (error) => {
-      toast.error(error.message)
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(projectId, taskId) })
-      toast.success(data)
-    },
-  })
-
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const status = e.target.value as TaskStatus
-
-    const data = {
-      projectId,
-      taskId,
-      status,
-    }
-
-    mutate(data)
-  }
+  const { mutate, isPending, error: statusError } = useTaskStatus(projectId)
 
   if (isLoading)
-    return <AsyncState data={data} error={null} isLoading empty={null}>{() => null}</AsyncState>
+    return (
+      <AsyncState data={data} error={null} isLoading empty={null}>
+        {() => null}
+      </AsyncState>
+    )
 
   if (isError && normalizeApiError(error).status === 404)
     return <Navigate to={`/projects/${projectId}`} />
 
   if (isError)
     return (
-      <AsyncState data={data} error={error} isLoading={false} empty={null} onRetry={() => void refetch()}>
+      <AsyncState
+        data={data}
+        error={error}
+        isLoading={false}
+        empty={null}
+        onRetry={() => void refetch()}
+      >
         {() => null}
       </AsyncState>
     )
@@ -106,54 +94,96 @@ export default function TaskModalDetails() {
                   leaveFrom="opacity-100 scale-100"
                   leaveTo="opacity-0 scale-95"
                 >
-                  <DialogPanel className="w-full max-w-4xl transform overflow-hidden rounded-2xl bg-white text-left align-middle shadow-xl transition-all p-16">
-                    <p className="text-sm text-slate-400">
+                  <DialogPanel className="w-full max-w-2xl transform rounded-2xl bg-white p-5 text-left shadow-xl transition-all sm:p-8">
+                    <div className="mb-4 flex justify-end">
+                      <Button
+                        variant="secondary"
+                        onClick={() =>
+                          navigate(location.pathname, { replace: true })
+                        }
+                      >
+                        Cerrar
+                      </Button>
+                    </div>
+                    <p className="text-xs text-slate-500">
                       Agregada el: {formatDate(data.createdAt)}{' '}
                     </p>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-xs text-slate-500">
                       Última actualización: {formatDate(data.updatedAt)}
                     </p>
                     <DialogTitle
                       as="h3"
-                      className="font-black text-4xl text-slate-600 my-5"
+                      className="my-5 break-words text-2xl font-bold text-slate-900"
                     >
                       {data.name}
                     </DialogTitle>
-                    <p className="text-lg text-slate-500 mb-2">
+                    <p className="mb-4 break-words text-slate-600">
                       Descripción: {data.description}
                     </p>
+                    <dl className="grid grid-cols-2 gap-4 rounded-xl bg-slate-50 p-4 text-sm">
+                      <div>
+                        <dt className="text-slate-500">Responsable</dt>
+                        <dd className="mt-1 font-medium">
+                          {data.assignee?.name ?? 'Sin asignar'}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-slate-500">Prioridad</dt>
+                        <dd className="mt-1 font-medium">
+                          {
+                            { low: 'Baja', medium: 'Media', high: 'Alta' }[
+                              data.priority ?? 'medium'
+                            ]
+                          }
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-slate-500">Fecha límite</dt>
+                        <dd className="mt-1 font-medium">
+                          {data.dueDate?.slice(0, 10) ?? 'Sin fecha límite'}
+                        </dd>
+                      </div>
+                    </dl>
                     {data.completedBy.length ? (
                       <>
-                        <p className="font-bold text-2xl text-slate-600 my-5">
+                        <p className="my-5 text-lg font-semibold text-slate-800">
                           Historial de Cambios
                         </p>
-                        <ul className="list-decimal">
+                        <ul className="list-decimal space-y-2 pl-5 text-sm">
                           {data.completedBy.map((activityLog) => (
                             <li key={activityLog._id}>
                               <span className="font-bold text-slate-600">
                                 {statusTranslations[activityLog.status]}
                               </span>{' '}
                               por: {activityLog.user.name}
+                              {activityLog.createdAt && (
+                                <time
+                                  dateTime={activityLog.createdAt}
+                                  className="ml-2 text-slate-500"
+                                >
+                                  {formatDate(activityLog.createdAt)}
+                                </time>
+                              )}
                             </li>
                           ))}
                         </ul>
                       </>
                     ) : null}
                     <div className="my-5 space-y-3">
-                      <label className="font-bold">Estado Actual:</label>
-                      <select
-                        className="w-full p-3 bg-white border border-gray-300 mt-2"
-                        defaultValue={data.status}
-                        onChange={handleChange}
-                      >
-                        {Object.entries(statusTranslations).map(
-                          ([key, value]) => (
-                            <option key={key} value={key}>
-                              {value}
-                            </option>
-                          )
-                        )}
-                      </select>
+                      <TaskStatusControl
+                        taskId={taskId}
+                        name={data.name}
+                        status={data.status}
+                        disabled={isPending}
+                        onChange={(status) =>
+                          mutate({ projectId, taskId, status })
+                        }
+                      />
+                      {statusError && (
+                        <p role="alert" className="text-sm text-red-700">
+                          No se pudo cambiar el estado: {statusError.message}
+                        </p>
+                      )}
                     </div>
                     <NotesPanel notes={data.notes} />
                   </DialogPanel>

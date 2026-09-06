@@ -1,5 +1,6 @@
 import { login } from '@/api/AuthAPI'
-import ErrorMessage from '@/components/ErrorMessage'
+import Field from '@/components/ui/Field'
+import Button from '@/components/ui/Button'
 import { UserLoginForm } from '@/types/index'
 import { useMutation } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -32,24 +33,20 @@ export default function LoginView() {
 
   return (
     <>
-      <h1 className="text-5xl font-black text-white">Iniciar sesión</h1>
-      <p className="text-2xl font-light text-white mt-5">
-        Comienza a planear tus proyectos {''}
-        <span className=" text-fuchsia-500 font-bold"> iniciando sesión</span>
-      </p>
+      <h1 className="text-3xl font-bold tracking-tight text-white">Iniciar sesión</h1>
+      <p className="mt-3 text-slate-300">Comienza a planear tus proyectos iniciando sesión.</p>
       <form
         onSubmit={handleSubmit(handleLogin)}
-        className="space-y-8 p-10 bg-white rounded-xl mt-10"
+        className="mt-6 space-y-5 rounded-2xl bg-white p-5 shadow-xl sm:p-8"
         noValidate
       >
-        <div className="flex flex-col gap-5">
-          <label className="font-normal text-2xl">Email</label>
-
+        <Field label="Email" id="email" error={errors.email?.message}>
           <input
             id="email"
             type="email"
             placeholder="Email de Registro"
-            className="w-full p-3  border-gray-300 border"
+            className="field-control"
+            autoComplete="email"
             {...register('email', {
               required: 'El Email es obligatorio',
               pattern: {
@@ -58,30 +55,19 @@ export default function LoginView() {
               },
             })}
           />
-          {errors.email && <ErrorMessage>{errors.email.message}</ErrorMessage>}
-        </div>
-
-        <div className="flex flex-col gap-5">
-          <label className="font-normal text-2xl">Password</label>
-
+        </Field>
+        <Field label="Password" id="password" error={errors.password?.message}>
           <input
             type="password"
             placeholder="Password de Registro"
-            className="w-full p-3  border-gray-300 border"
+            className="field-control"
+            autoComplete="current-password"
             {...register('password', {
               required: 'El Password es obligatorio',
             })}
           />
-          {errors.password && (
-            <ErrorMessage>{errors.password.message}</ErrorMessage>
-          )}
-        </div>
-
-        <input
-          type="submit"
-          value="Iniciar Sesión"
-          className="bg-fuchsia-600 hover:bg-fuchsia-700 w-full p-3  text-white font-black  text-xl cursor-pointer"
-        />
+        </Field>
+        <Button type="submit" className="w-full">Iniciar Sesión</Button>
       </form>
       <nav className="mt-10 flex flex-col space-y-4">
         <Link

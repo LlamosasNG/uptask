@@ -6,7 +6,7 @@ import {
   Transition,
   TransitionChild,
 } from "@headlessui/react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { Project, Task, TaskFormData } from "@/types/index";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +14,7 @@ import TaskForm from "./TaskForm";
 import { updateTask } from "@/api/TaskAPI";
 import { toast } from "react-toastify";
 import { queryKeys } from '@/api/queryKeys';
+import Button from '../ui/Button';
 
 type EditTaskModalProps = {
   data: Task;
@@ -27,8 +28,10 @@ export default function EditTaskModal({
   taskId,
 }: EditTaskModalProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     register,
+    control,
     reset,
     handleSubmit,
     formState: { errors },
@@ -36,12 +39,15 @@ export default function EditTaskModal({
     defaultValues: {
       name: data.name,
       description: data.description,
+      assignee: data.assignee?._id ?? null,
+      dueDate: data.dueDate?.slice(0, 10) ?? null,
+      priority: data.priority ?? 'medium',
     },
   });
 
   const queryClient = useQueryClient();
 
-  const { mutate } = useMutation({
+  const { mutate, isPending } = useMutation({
     mutationFn: updateTask,
     onError: (error) => {
       toast.error(error.message);
@@ -94,27 +100,26 @@ export default function EditTaskModal({
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <DialogPanel className="w-full max-w-4xl transform overflow-hidden rounded-2xl bg-white text-left align-middle shadow-xl transition-all p-16">
-                <DialogTitle as="h3" className="font-black text-4xl  my-5">
+              <DialogPanel className="w-full max-w-2xl transform rounded-2xl bg-white p-5 text-left shadow-xl transition-all sm:p-8">
+                <DialogTitle as="h3" className="text-2xl font-bold text-slate-900">
                   Editar Tarea
                 </DialogTitle>
 
-                <p className="text-xl font-bold">
+                <p className="mt-3 text-slate-600">
                   Realiza cambios a una tarea en {""}
-                  <span className="text-fuchsia-600">este formulario</span>
+                  <span>este formulario</span>
                 </p>
 
                 <form
-                  className="mt-10 space-y-3"
+                  className="mt-6 space-y-6"
                   noValidate
                   onSubmit={handleSubmit(handleEditTask)}
                 >
-                  <TaskForm errors={errors} register={register} />
-                  <input
-                    type="submit"
-                    className=" bg-fuchsia-600 hover:bg-fuchsia-700 w-full p-3  text-white font-black  text-xl cursor-pointer"
-                    value="Guardar Tarea"
-                  />
+                  <TaskForm errors={errors} register={register} control={control} />
+                  <div className="flex flex-wrap justify-end gap-3">
+                    <Button variant="secondary" onClick={() => navigate(location.pathname, { replace: true })}>Cancelar</Button>
+                    <Button type="submit" disabled={isPending}>{isPending ? 'Guardando…' : 'Guardar tarea'}</Button>
+                  </div>
                 </form>
               </DialogPanel>
             </TransitionChild>

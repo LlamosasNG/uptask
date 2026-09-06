@@ -1,6 +1,7 @@
 import { normalizeApiError } from '@/api/errors'
 import LoadingApp from './LoadingApp'
 import type { ReactNode } from 'react'
+import Button from './ui/Button'
 
 type AsyncStateProps<T> = {
   data: T | undefined
@@ -32,13 +33,12 @@ export default function AsyncState<T>({
         </p>
         <p className="mt-2 text-slate-500">{apiError.message}</p>
         {apiError.isRetryable && onRetry && (
-          <button
-            type="button"
-            className="mt-5 bg-purple-400 px-5 py-2 font-bold text-white hover:bg-purple-500"
+          <Button
+            className="mt-5"
             onClick={onRetry}
           >
             Reintentar
-          </button>
+          </Button>
         )}
       </section>
     )

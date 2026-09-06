@@ -85,14 +85,14 @@ export default function DeleteProjectModal() {
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <DialogPanel className="w-full max-w-4xl transform overflow-hidden rounded-2xl bg-white text-left align-middle shadow-xl transition-all p-16">
-                <DialogTitle as="h3" className="font-black text-4xl  my-5">
+              <DialogPanel className="w-full max-w-2xl transform rounded-2xl bg-white p-5 text-left shadow-xl transition-all sm:p-8">
+                <DialogTitle as="h3" className="text-2xl font-bold text-slate-900">
                   Eliminar Proyecto{' '}
                 </DialogTitle>
 
-                <p className="text-xl font-bold">
+                <p className="mt-3 text-slate-600">
                   Confirma la eliminación del proyecto {''}
-                  <span className="text-fuchsia-600">
+                  <span>
                     colocando tu password
                   </span>
                 </p>
@@ -103,14 +103,14 @@ export default function DeleteProjectModal() {
                   noValidate
                 >
                   <div className="flex flex-col gap-3">
-                    <label className="font-normal text-2xl" htmlFor="password">
+                    <label className="text-sm font-semibold" htmlFor="password">
                       Password
                     </label>
                     <input
                       id="password"
                       type="password"
                       placeholder="Password Inicio de Sesión"
-                      className="w-full p-3  border-gray-300 border"
+                      className="field-control"
                       {...register('password', {
                         required: 'El password es obligatorio',
                       })}
@@ -122,7 +122,7 @@ export default function DeleteProjectModal() {
 
                   <input
                     type="submit"
-                    className=" bg-fuchsia-600 hover:bg-fuchsia-700 w-full p-3  text-white font-black  text-xl cursor-pointer"
+                    className="btn btn-danger w-full"
                     value="Eliminar Proyecto"
                   />
                 </form>
