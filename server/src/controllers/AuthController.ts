@@ -103,8 +103,7 @@ export class AuthController {
 
       const token = generateJWT({ _id: user._id })
       res.status(201).send(token)
-    } catch (error) {
-      console.log(error);
+    } catch {
       res
         .status(500)
         .json({ error: 'Hubo un error al intentar iniciar sesión' })

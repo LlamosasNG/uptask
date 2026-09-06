@@ -6,9 +6,10 @@ import {
   type RequestLog,
 } from '../src/middleware/requestLogger'
 
-it('logs only safe request metadata without query values or credentials', async () => {
+it('logs a matched route template without dynamic segments or credentials', async () => {
   const entries: RequestLog[] = []
   const app = express()
+  const router = express.Router()
   app.use(express.json())
   app.use(
     createRequestLogger({
@@ -16,10 +17,13 @@ it('logs only safe request metadata without query values or credentials', async 
       write: (entry) => entries.push(entry),
     })
   )
-  app.post('/resource', (_request, response) => response.status(201).send())
+  router.post('/update-password/:token', (_request, response) =>
+    response.status(201).send()
+  )
+  app.use('/api/auth', router)
 
   await request(app)
-    .post('/resource?token=query-secret')
+    .post('/api/auth/update-password/path-secret?token=query-secret')
     .set('Authorization', 'Bearer header-secret')
     .send({ password: 'body-secret' })
     .expect(201)
@@ -28,11 +32,33 @@ it('logs only safe request metadata without query values or credentials', async 
   expect(entries[0]).toEqual({
     timestamp: expect.any(String),
     method: 'POST',
-    path: '/resource',
+    path: '/update-password/:token',
     status: 201,
     durationMs: expect.any(Number),
   })
   expect(JSON.stringify(entries[0])).not.toMatch(
-    /query-secret|header-secret|body-secret/
+    /path-secret|query-secret|header-secret|body-secret/
+  )
+})
+
+it('uses a constant safe path when no Express route matched', async () => {
+  const entries: RequestLog[] = []
+  const app = express()
+  app.use(
+    createRequestLogger({
+      enabled: true,
+      write: (entry) => entries.push(entry),
+    })
+  )
+
+  await request(app)
+    .get('/unmatched/path-secret?token=query-secret')
+    .set('Authorization', 'Bearer header-secret')
+    .expect(404)
+
+  expect(entries).toHaveLength(1)
+  expect(entries[0].path).toBe('[unmatched]')
+  expect(JSON.stringify(entries[0])).not.toMatch(
+    /path-secret|query-secret|header-secret/
   )
 })

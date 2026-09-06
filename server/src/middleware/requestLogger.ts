@@ -27,10 +27,11 @@ export function createRequestLogger({
 
     response.once('finish', () => {
       const elapsedNanoseconds = process.hrtime.bigint() - startedAt
+      const routePath = request.route?.path
       write({
         timestamp,
         method: request.method,
-        path: request.path,
+        path: typeof routePath === 'string' ? routePath : '[unmatched]',
         status: response.statusCode,
         durationMs: Number((Number(elapsedNanoseconds) / 1_000_000).toFixed(3)),
       })
