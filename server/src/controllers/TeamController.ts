@@ -34,13 +34,12 @@ export class TeamController {
     const session = await mongoose.startSession()
     try {
       await session.withTransaction(async () => {
-        req.project.team = req.project.team.filter((teamMember) => teamMember.toString() !== userId)
         await Task.updateMany(
           { project: req.project._id, assignee: userId },
           { assignee: null },
           { session }
         )
-        await req.project.save({ session })
+        await Project.updateOne({ _id: req.project._id }, { $pull: { team: userId } }, { session })
       })
     } finally {
       await session.endSession()

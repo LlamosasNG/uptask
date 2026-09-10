@@ -8,8 +8,8 @@ import { asyncHandler } from '../middleware/error'
 
 export class ProjectController {
   static createProjects: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
-    const project = new Project(req.body)
-    project.manager = req.user._id
+    const { projectName, clientName, description } = req.body
+    const project = new Project({ projectName, clientName, description, manager: req.user._id })
     await project.save()
     res.send('Proyecto creado correctamente')
   })
@@ -24,6 +24,7 @@ export class ProjectController {
   static getProjectById: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
     const project = await Project.findById(req.project._id).populate({
       path: 'tasks',
+      match: { project: req.project._id },
       populate: { path: 'assignee', select: '_id name' },
     })
     if (!project) throw new HttpError(404, 'NOT_FOUND', 'Proyecto no encontrado')

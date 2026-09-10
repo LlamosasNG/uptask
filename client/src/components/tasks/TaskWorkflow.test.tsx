@@ -70,7 +70,7 @@ const project: Project = {
   description: 'Web',
   clientName: 'Cliente',
   manager: manager._id,
-  team: [member],
+  team: [member._id],
   tasks,
 }
 const task: Task = {

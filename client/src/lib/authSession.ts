@@ -12,10 +12,12 @@ export async function endAuthSession() {
 
 export function bindAuthCache(queryClient: QueryClient) {
   const clearUser = async () => {
-    queryClient.setQueryData(queryKeys.auth.user(), null)
     await queryClient.cancelQueries(
-      { queryKey: queryKeys.auth.user(), exact: true }
+      { queryKey: queryKeys.auth.user(), exact: true }, { revert: false }
     )
+    queryClient.setQueryData(queryKeys.auth.user(), null)
+    await queryClient.cancelQueries({ queryKey: queryKeys.projects.all() })
+    queryClient.removeQueries({ queryKey: queryKeys.projects.all() })
   }
 
   listeners.add(clearUser)

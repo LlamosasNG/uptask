@@ -2,22 +2,22 @@ import type { Request, RequestHandler, Response } from 'express'
 import mongoose from 'mongoose'
 import { HttpError } from '../errors/HttpError'
 import Note, { INote } from '../models/Note'
+import Task from '../models/Task'
 import { asyncHandler } from '../middleware/error'
 
 export class NoteController {
   static createNote: RequestHandler = asyncHandler(async (req: Request<{}, {}, INote>, res: Response) => {
     const { content } = req.body
-    const note = new Note()
-    note.content = content
-    note.createdBy = req.user._id
-    note.task = req.task._id
-    req.task.notes.push(note._id)
-
+    const noteId = new mongoose.Types.ObjectId()
     const session = await mongoose.startSession()
     try {
       await session.withTransaction(async () => {
+        const note = new Note({ _id: noteId, content, createdBy: req.user._id, task: req.task._id })
         await note.save({ session })
-        await req.task.save({ session })
+        const parent = await Task.updateOne(
+          { _id: req.task._id, project: req.project._id }, { $addToSet: { notes: noteId } }, { session }
+        )
+        if (!parent.matchedCount) throw new HttpError(404, 'NOT_FOUND', 'Tarea no encontrada')
       })
       res.send('Nota Creada Correctamente')
     } finally {
@@ -32,23 +32,16 @@ export class NoteController {
 
   static deleteNote: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
     const { noteId } = req.params
-    const note = await Note.findById(noteId)
-
-    if (!note) {
-      throw new HttpError(404, 'NOT_FOUND', 'Nota no encontrada')
-    }
-    if (note.task.toString() !== req.task._id.toString()) {
-      throw new HttpError(404, 'NOT_FOUND', 'Nota no encontrada')
-    }
-    if (note.createdBy.toString() !== req.user._id.toString()) {
-      throw new HttpError(403, 'FORBIDDEN', 'Acción no válida')
-    }
     const session = await mongoose.startSession()
     try {
       await session.withTransaction(async () => {
-        req.task.notes = req.task.notes.filter((taskNote) => taskNote.toString() !== noteId)
-        await req.task.save({ session })
-        await Note.deleteOne({ _id: note._id }, { session })
+        const note = await Note.findOne({ _id: noteId, task: req.task._id }).session(session)
+        if (!note) throw new HttpError(404, 'NOT_FOUND', 'Nota no encontrada')
+        if (note.createdBy.toString() !== req.user._id.toString()) {
+          throw new HttpError(403, 'FORBIDDEN', 'Acción no válida')
+        }
+        await Task.updateOne({ _id: req.task._id }, { $pull: { notes: note._id } }, { session })
+        await Note.deleteOne({ _id: note._id, task: req.task._id }, { session })
       })
       res.send('Nota Eliminada Correctamente')
     } finally {

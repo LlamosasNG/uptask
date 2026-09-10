@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import { AUTH_TOKEN_KEY } from '@/lib/authSession'
+import { AUTH_TOKEN_KEY, endAuthSession } from '@/lib/authSession'
 import { parseResponse } from './errors'
 import {
   CheckPasswordForm,
@@ -29,6 +29,7 @@ export async function requestConfirmationCode(formData: RequestConfirmationCodeF
 
 export async function login(formData: UserLoginForm) {
   const { data } = await api.post<string>('/auth/login', formData)
+  await endAuthSession()
   localStorage.setItem(AUTH_TOKEN_KEY, data)
 }
 

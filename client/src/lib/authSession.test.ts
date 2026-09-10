@@ -10,6 +10,31 @@ describe('expired authentication', () => {
     localStorage.clear()
   })
 
+  it('does not sign account B out when an old account A request returns a delayed 401', async () => {
+    const queryClient = new QueryClient()
+    const unbind = bindAuthCache(queryClient)
+    const previousAdapter = api.defaults.adapter
+    let rejectOld!: () => void
+    api.defaults.adapter = (config) => new Promise((_resolve, reject) => {
+      rejectOld = () => reject(new AxiosError('expired', undefined, config, undefined, {
+        data: { error: 'Expired' }, status: 401, statusText: 'Unauthorized', headers: {}, config,
+      }))
+    })
+    localStorage.setItem(AUTH_TOKEN_KEY, 'A-token')
+    const pending = api.get('/projects').catch(() => undefined)
+    await vi.waitFor(() => expect(rejectOld).toBeTypeOf('function'))
+    await endAuthSession()
+    localStorage.setItem(AUTH_TOKEN_KEY, 'B-token')
+    queryClient.setQueryData(queryKeys.auth.user(), { _id: 'B', name: 'Bea' })
+    rejectOld()
+    await pending
+    expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBe('B-token')
+    expect(queryClient.getQueryData(queryKeys.auth.user())).toMatchObject({ _id: 'B' })
+    api.defaults.adapter = previousAdapter
+    unbind()
+    queryClient.clear()
+  })
+
   it('moves an active user observer to a settled signed-out state on manual logout', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const unsubscribeSession = bindAuthCache(queryClient)

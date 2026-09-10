@@ -1,8 +1,9 @@
-import { login } from '@/api/AuthAPI'
+import { getUser, login } from '@/api/AuthAPI'
+import { queryKeys } from '@/api/queryKeys'
 import Field from '@/components/ui/Field'
 import Button from '@/components/ui/Button'
 import { UserLoginForm } from '@/types/index'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -19,8 +20,12 @@ export default function LoginView() {
   } = useForm({ defaultValues: initialValues })
 
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { mutate } = useMutation({
-    mutationFn: login,
+    mutationFn: async (formData: UserLoginForm) => {
+      await login(formData)
+      await queryClient.fetchQuery({ queryKey: queryKeys.auth.user(), queryFn: getUser, staleTime: 0 })
+    },
     onError: (error) => {
       toast.error(error.message)
     },

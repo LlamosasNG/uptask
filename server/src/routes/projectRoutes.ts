@@ -15,6 +15,20 @@ import { handleInputErrors } from '../middleware/validation'
 
 const router: Router = Router()
 
+const requiredText = (field: string, message: string) =>
+  body(field).isString().withMessage(message).bail().trim().notEmpty().withMessage(message)
+
+const projectTextValidators = [
+  requiredText('projectName', 'El nombre del proyecto es obligatorio'),
+  requiredText('clientName', 'El nombre del cliente es obligatorio'),
+  requiredText('description', 'La descripción es obligatoria'),
+]
+
+const taskTextValidators = [
+  requiredText('name', 'El nombre de la tarea es obligatorio'),
+  requiredText('description', 'La descripción es obligatoria'),
+]
+
 const taskPlanningValidators = [
   body('assignee')
     .optional({ nullable: true })
@@ -41,13 +55,7 @@ const taskPlanningValidators = [
 router.use(authenticate)
 router.post(
   '/',
-  body('projectName')
-    .notEmpty()
-    .withMessage('El nombre del proyecto es obligatorio'),
-  body('clientName')
-    .notEmpty()
-    .withMessage('El nombre del cliente es obligatorio'),
-  body('description').notEmpty().withMessage('La descripción es obligatoria'),
+  projectTextValidators,
   handleInputErrors,
   ProjectController.createProjects
 )
@@ -66,13 +74,7 @@ router.param('projectId', projectExists)
 router.put(
   '/:projectId',
   param('projectId').isMongoId().withMessage('ID no válido'),
-  body('projectName')
-    .notEmpty()
-    .withMessage('El nombre del proyecto es obligatorio'),
-  body('clientName')
-    .notEmpty()
-    .withMessage('El nombre del cliente es obligatorio'),
-  body('description').notEmpty().withMessage('La descripción es obligatoria'),
+  projectTextValidators,
   handleInputErrors,
   requireProjectManager,
   ProjectController.updateProject
@@ -93,8 +95,7 @@ router.param('taskId', taskBelongsToProject)
 router.post(
   '/:projectId/tasks',
   requireProjectManager,
-  body('name').notEmpty().withMessage('El nombre de la tarea es obligatorio'),
-  body('description').notEmpty().withMessage('La descripción es obligatoria'),
+  taskTextValidators,
   taskPlanningValidators,
   handleInputErrors,
   TaskController.createTask
@@ -119,8 +120,7 @@ router.put(
   '/:projectId/tasks/:taskId',
   requireProjectManager,
   param('taskId').isMongoId().withMessage('ID no válido'),
-  body('name').notEmpty().withMessage('El nombre de la tarea es obligatorio'),
-  body('description').notEmpty().withMessage('La descripción es obligatoria'),
+  taskTextValidators,
   taskPlanningValidators,
   handleInputErrors,
   TaskController.updateTask

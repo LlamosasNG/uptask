@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
 import { normalizeApiError } from '@/api/errors'
 import { AUTH_TOKEN_KEY, endAuthSession } from './authSession'
 
@@ -18,7 +18,11 @@ api.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
     const apiError = normalizeApiError(error)
-    if (apiError.status === 401) await endAuthSession()
+    const token = localStorage.getItem(AUTH_TOKEN_KEY)
+    const requestAuthorization = isAxiosError(error) ? error.config?.headers.Authorization : undefined
+    if (apiError.status === 401 && requestAuthorization === (token ? `Bearer ${token}` : undefined)) {
+      await endAuthSession()
+    }
     return Promise.reject(apiError)
   }
 )

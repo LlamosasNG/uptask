@@ -1,5 +1,6 @@
 import { NextFunction, Request, RequestHandler, Response } from 'express'
 import jwt from 'jsonwebtoken'
+import { isObjectIdOrHexString } from 'mongoose'
 import { env } from '../config/env'
 import { HttpError } from '../errors/HttpError'
 import { asyncHandler } from './error'
@@ -23,20 +24,17 @@ export const authenticate: RequestHandler = asyncHandler(async (
     throw new HttpError(401, 'UNAUTHORIZED', 'No autorizado')
   }
   const token = bearer.split(' ')[1]
+  let decoded: string | jwt.JwtPayload
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET)
-    if (typeof decoded === 'object' && decoded._id) {
-      const user = await User.findById(decoded._id).select('id email name')
-      if (user) {
-        req.user = user
-        return next()
-      } else {
-        throw new HttpError(401, 'UNAUTHORIZED', 'Token no válido')
-      }
-    }
-    throw new HttpError(401, 'UNAUTHORIZED', 'Token no válido')
-  } catch (error) {
-    if (error instanceof HttpError) throw error
+    decoded = jwt.verify(token, env.JWT_SECRET)
+  } catch {
     throw new HttpError(401, 'UNAUTHORIZED', 'Token no válido')
   }
+  if (typeof decoded !== 'object' || !isObjectIdOrHexString(decoded._id)) {
+    throw new HttpError(401, 'UNAUTHORIZED', 'Token no válido')
+  }
+  const user = await User.findById(decoded._id).select('id email name')
+  if (!user) throw new HttpError(401, 'UNAUTHORIZED', 'Token no válido')
+  req.user = user
+  next()
 })

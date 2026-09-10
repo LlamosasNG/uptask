@@ -9,7 +9,7 @@ import {
 } from '@headlessui/react'
 import { EllipsisVerticalIcon } from '@heroicons/react/20/solid'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Fragment } from 'react'
+import { Fragment, useState } from 'react'
 import {
   Link,
   Navigate,
@@ -26,6 +26,8 @@ import EmptyState from '@/components/ui/EmptyState'
 import Button from '@/components/ui/Button'
 import { useAuth } from '@/hooks/useAuth'
 import { getFullProject } from '@/api/ProjectAPI'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import type { TeamMember } from '@/types/index'
 
 export default function ProjectTeamView() {
   const navigate = useNavigate()
@@ -33,8 +35,9 @@ export default function ProjectTeamView() {
   const params = useParams()
   const projectId = params.projectId!
   const queryClient = useQueryClient()
+  const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null)
   const { data: user } = useAuth()
-  const { data: project } = useQuery({
+  const { data: project, error: projectError, isLoading: projectLoading, refetch: refetchProject } = useQuery({
     queryKey: queryKeys.projects.detail(projectId),
     queryFn: () => getFullProject(projectId),
     retry: false,
@@ -47,20 +50,27 @@ export default function ProjectTeamView() {
     retry: false,
   })
 
-  const { mutate } = useMutation({
+  const { mutate, isPending } = useMutation({
     mutationFn: removeMemberToProject,
     onError: (error) => {
       toast.error(error.message)
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast.success(data)
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.projects.team(projectId),
-      })
+      setMemberToRemove(null)
+      await queryClient.invalidateQueries({ queryKey: queryKeys.projects.all() })
     },
   })
 
-  if (isLoading)
+  if (projectError && normalizeApiError(projectError).status === 404)
+    return <Navigate to="/404" />
+  if (projectError)
+    return (
+      <AsyncState data={project} error={projectError} isLoading={false} empty={null} onRetry={() => void refetchProject()}>
+        {() => null}
+      </AsyncState>
+    )
+  if (isLoading || projectLoading)
     return (
       <AsyncState data={data} error={null} isLoading empty={null}>
         {() => null}
@@ -157,7 +167,7 @@ export default function ProjectTeamView() {
                               type="button"
                               className="block px-3 py-1 text-sm leading-6 text-red-500 cursor-pointer"
                               onClick={() => {
-                                mutate({ projectId, id: member._id })
+                                setMemberToRemove(member)
                               }}
                             >
                               Eliminar del Proyecto
@@ -182,6 +192,16 @@ export default function ProjectTeamView() {
           />
         )}
         {canManage && <AddMemberModal />}
+        <ConfirmDialog
+          open={!!memberToRemove}
+          title="Eliminar colaborador"
+          description={`${memberToRemove?.name ?? 'El colaborador'} perderá acceso al proyecto y se eliminarán sus asignaciones de tareas.`}
+          pending={isPending}
+          onCancel={() => setMemberToRemove(null)}
+          onConfirm={() => {
+            if (memberToRemove && canManage) mutate({ projectId, id: memberToRemove._id })
+          }}
+        />
       </>
     )
 }
