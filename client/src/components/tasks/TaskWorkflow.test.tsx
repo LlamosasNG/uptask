@@ -28,6 +28,11 @@ import ProjectDetailsView from '@/views/projects/ProjectDetailsView'
 import LoginView from '@/views/auth/LoginView'
 import ProjectTeamView from '@/views/projects/ProjectTeamView'
 import { useTaskStatus } from '@/hooks/useTaskStatus'
+import {
+  AUTH_TOKEN_KEY,
+  bindAuthCache,
+  endAuthSession,
+} from '@/lib/authSession'
 
 // The spinner package's styled-components export cannot load in jsdom; no loading behavior is replaced.
 vi.mock('react-loader-spinner', () => ({ ProgressBar: () => <span /> }))
@@ -135,6 +140,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
   api.defaults.adapter = originalAdapter
+  localStorage.clear()
   client.clear()
 })
 
@@ -774,6 +780,122 @@ it('does not roll back a later status when an earlier successful invalidation re
     client.getQueryData<Task>(queryKeys.tasks.detail('project', 'one'))!
       .status,
   ).toBe('completed')
+})
+
+it('does not restore account A task caches when its delayed status mutation fails after account B signs in', async () => {
+  let rejectStatus!: (error: Error) => void
+  statusRequest = () =>
+    new Promise((_, reject) => {
+      rejectStatus = reject
+    })
+  client.setQueryData(
+    queryKeys.tasks.detail('project', 'one'),
+    structuredClone(task),
+  )
+  const unbind = bindAuthCache(client)
+  localStorage.setItem(AUTH_TOKEN_KEY, 'A-token')
+  const { result } = renderHook(() => useTaskStatus('project'), {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    ),
+  })
+
+  act(() =>
+    result.current.mutate({
+      projectId: 'project',
+      taskId: 'one',
+      status: 'inProgress',
+    }),
+  )
+  await waitFor(() => expect(rejectStatus).toBeTypeOf('function'))
+
+  await act(async () => {
+    await endAuthSession()
+    localStorage.setItem(AUTH_TOKEN_KEY, 'B-token')
+    client.setQueryData(queryKeys.auth.user(), {
+      _id: 'B',
+      name: 'Bea',
+      email: 'bea@example.com',
+    })
+    rejectStatus(new Error('A status request failed'))
+  })
+  await waitFor(() => expect(result.current.isPending).toBe(false))
+
+  expect(client.getQueryData(queryKeys.auth.user())).toMatchObject({ _id: 'B' })
+  expect(client.getQueryData(queryKeys.projects.detail('project'))).toBeUndefined()
+  expect(
+    client.getQueryData(queryKeys.tasks.detail('project', 'one')),
+  ).toBeUndefined()
+  unbind()
+})
+
+it('does not run a queued account A status change after account B signs in', async () => {
+  let statusCalls = 0
+  let rejectFirst!: (error: Error) => void
+  statusRequest = () => {
+    statusCalls += 1
+    if (statusCalls === 1)
+      return new Promise((_, reject) => {
+        rejectFirst = reject
+      })
+    return Promise.resolve('Guardado')
+  }
+  const unbind = bindAuthCache(client)
+  localStorage.setItem(AUTH_TOKEN_KEY, 'A-token')
+  const { result } = renderHook(
+    () => ({
+      first: useTaskStatus('project'),
+      queued: useTaskStatus('project'),
+    }),
+    {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    },
+  )
+
+  act(() =>
+    result.current.first.mutate({
+      projectId: 'project',
+      taskId: 'one',
+      status: 'inProgress',
+    }),
+  )
+  await waitFor(() => expect(rejectFirst).toBeTypeOf('function'))
+  act(() =>
+    result.current.queued.mutate({
+      projectId: 'project',
+      taskId: 'one',
+      status: 'completed',
+    }),
+  )
+
+  await act(async () => {
+    await endAuthSession()
+    localStorage.setItem(AUTH_TOKEN_KEY, 'B-token')
+    client.setQueryData(queryKeys.auth.user(), {
+      _id: 'B',
+      name: 'Bea',
+      email: 'bea@example.com',
+    })
+    client.setQueryData(queryKeys.projects.detail('project'), {
+      ...project,
+      projectName: 'Proyecto de B',
+    })
+    rejectFirst(new Error('A status request failed'))
+  })
+  await waitFor(() =>
+    expect(
+      result.current.first.isPending || result.current.queued.isPending,
+    ).toBe(false),
+  )
+
+  expect(statusCalls).toBe(1)
+  expect(
+    client.getQueryData<Project>(queryKeys.projects.detail('project'))
+      ?.projectName,
+  ).toBe('Proyecto de B')
+  unbind()
 })
 
 it('releases the status writer when optimistic setup fails', async () => {

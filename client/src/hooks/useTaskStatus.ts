@@ -7,6 +7,7 @@ import { updateStatus } from '@/api/TaskAPI'
 import { queryKeys } from '@/api/queryKeys'
 import type { Project, Task } from '@/types/index'
 import { toast } from 'react-toastify'
+import { getAuthSessionVersion } from '@/lib/authSession'
 
 // All hook instances sharing a project cache must also share its write order.
 // React Query mutation scopes alone do not serialize onMutate snapshots.
@@ -36,8 +37,11 @@ export function useTaskStatus(projectId: string) {
   return useMutation({
     mutationFn: updateStatus,
     onMutate: async ({ taskId, status }) => {
+      const sessionVersion = getAuthSessionVersion()
       const release = await acquireStatusWrite(queryClient, projectId)
       try {
+        if (sessionVersion !== getAuthSessionVersion())
+          throw new Error('La sesión cambió durante la actualización')
         const projectKey = queryKeys.projects.detail(projectId)
         const taskKey = queryKeys.tasks.detail(projectId, taskId)
         await Promise.all([
@@ -60,13 +64,14 @@ export function useTaskStatus(projectId: string) {
           taskKey,
           (previous) => previous && { ...previous, status },
         )
-        return { previousProject, previousTask, release }
+        return { previousProject, previousTask, release, sessionVersion }
       } catch (error) {
         release()
         throw error
       }
     },
     onError: (error, { taskId }, context) => {
+      if (context?.sessionVersion !== getAuthSessionVersion()) return
       if (context?.previousProject)
         queryClient.setQueryData(
           queryKeys.projects.detail(projectId),
@@ -79,11 +84,13 @@ export function useTaskStatus(projectId: string) {
         )
       toast.error(error.message)
     },
-    onSuccess: (data) => {
+    onSuccess: (data, _variables, context) => {
+      if (context?.sessionVersion !== getAuthSessionVersion()) return
       toast.success(data)
     },
     onSettled: (_data, _error, { taskId }, context) => {
       try {
+        if (context?.sessionVersion !== getAuthSessionVersion()) return
         return Promise.allSettled([
           queryClient.invalidateQueries({
             queryKey: queryKeys.projects.detail(projectId),

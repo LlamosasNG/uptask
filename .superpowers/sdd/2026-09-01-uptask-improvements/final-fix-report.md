@@ -47,3 +47,9 @@ The first server production audit found four Nodemailer 9.0.5 advisories: one hi
 - `git diff --check` — passed before commit.
 
 The workspace runtime is Node 26.8.1; its experimental global web-storage property shadows jsdom localStorage unless disabled. The client test command above disables that Node feature only for the test process. CI remains on the configured Node 22. Tests use a real temporary Mongo replica set and mock only HTTP transport/email/fault-injection boundaries; no external email is sent. Browser smoke and final independent review are being handled by the parent agent separately and are not claimed here.
+
+## Independent re-review follow-up
+
+The final re-review found that an optimistic status mutation from account A could fail after logout and restore A's saved project/task snapshots into account B's cleared cache. A second queued mutation could likewise resume after the account change and execute with B's credential. Both cases were reproduced RED with the real React Query mutation lifecycle. Auth sessions now carry an in-memory generation number; status mutations capture it before queuing and skip execution, rollback, notifications, and invalidation when that generation is no longer current. Both regressions pass, bringing the client suite to **64 tests in 12 files**.
+
+The parent verification reran server tests/build/audit and client tests/lint/build/audit successfully. A fresh Chromium smoke of the rebuilt production bundle passed at 390 px and 1440 px with the expected column direction, explicit task-status changes, no document overflow, and no page errors.

@@ -4,8 +4,14 @@ import { queryKeys } from '@/api/queryKeys'
 export const AUTH_TOKEN_KEY = 'AUTH_TOKEN'
 
 const listeners = new Set<() => Promise<void>>()
+let authSessionVersion = 0
+
+export function getAuthSessionVersion() {
+  return authSessionVersion
+}
 
 export async function endAuthSession() {
+  authSessionVersion += 1
   localStorage.removeItem(AUTH_TOKEN_KEY)
   await Promise.all(Array.from(listeners, (listener) => listener()))
 }

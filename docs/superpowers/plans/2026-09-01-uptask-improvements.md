@@ -33,13 +33,13 @@
 - Produces `asyncHandler(handler)` and a final `errorHandler` returning `{ error: { code, message, fields? } }`.
 - Produces validated environment access through `env`.
 
-- [ ] Install Vitest, Supertest, type definitions, and mongodb-memory-server as backend dev dependencies.
-- [ ] Write integration tests proving outsiders cannot access project tasks/team/notes, collaborators cannot mutate team/project metadata, managers can, invalid tokens return 401, invalid status/description return 422, and nested notes must belong to the requested task.
-- [ ] Run the focused tests and confirm they fail against the existing routes.
-- [ ] Implement policy middleware, centralized error handling, complete route validation, correct status codes, and early returns.
-- [ ] Replace ignored `Promise.allSettled` results with MongoDB transactions or awaited operations that cannot report false success.
-- [ ] Run backend tests and build; refactor only while they remain green.
-- [ ] Commit only Task 1 files.
+- [x] Install Vitest, Supertest, type definitions, and mongodb-memory-server as backend dev dependencies.
+- [x] Write integration tests proving outsiders cannot access project tasks/team/notes, collaborators cannot mutate team/project metadata, managers can, invalid tokens return 401, invalid status/description return 422, and nested notes must belong to the requested task.
+- [x] Run the focused tests and confirm they fail against the existing routes.
+- [x] Implement policy middleware, centralized error handling, complete route validation, correct status codes, and early returns.
+- [x] Replace ignored `Promise.allSettled` results with MongoDB transactions or awaited operations that cannot report false success.
+- [x] Run backend tests and build; refactor only while they remain green.
+- [x] Commit only Task 1 files.
 
 ### Task 2: Task planning model and API contracts
 
@@ -52,12 +52,12 @@
 - Task create/update accepts `{ name, description, assignee?, dueDate?, priority? }` and validates assignee membership.
 - Project/task responses populate assignee as `{ _id, name } | null`.
 
-- [ ] Write failing integration tests for default priority, nullable planning fields, invalid priority/date, outsider assignee, valid team assignee, and timestamped status history.
-- [ ] Run focused tests and confirm each fails for the intended missing behavior.
-- [ ] Extend the model, validators, controllers, and response population with backward-compatible defaults.
-- [ ] Update the shared client-side Zod/type definitions to consume the exact API shape.
-- [ ] Run Task 2 tests plus the complete backend suite and builds.
-- [ ] Commit only Task 2 files.
+- [x] Write failing integration tests for default priority, nullable planning fields, invalid priority/date, outsider assignee, valid team assignee, and timestamped status history.
+- [x] Run focused tests and confirm each fails for the intended missing behavior.
+- [x] Extend the model, validators, controllers, and response population with backward-compatible defaults.
+- [x] Update the shared client-side Zod/type definitions to consume the exact API shape.
+- [x] Run Task 2 tests plus the complete backend suite and builds.
+- [x] Commit only Task 2 files.
 
 ### Task 3: Client API and application-state resilience
 
@@ -70,12 +70,12 @@
 - Produces centralized query-key factories and `parseResponse(schema, data)` that throws on schema mismatch.
 - A 401 clears the local token and cached user; 403/404/network/schema errors remain distinguishable in UI.
 
-- [ ] Install and configure Vitest, jsdom, and React Testing Library.
-- [ ] Write failing tests for normalized API errors, schema mismatch, 401 logout, independent loading states, and retryable network errors.
-- [ ] Implement the shared API/error/query utilities and migrate API functions without swallowing non-Axios or malformed-response errors.
-- [ ] Replace blank/loading-string branches with consistent loading, error, empty, and retry states.
-- [ ] Run client tests, lint, and build; refactor while green.
-- [ ] Commit only Task 3 files.
+- [x] Install and configure Vitest, jsdom, and React Testing Library.
+- [x] Write failing tests for normalized API errors, schema mismatch, 401 logout, independent loading states, and retryable network errors.
+- [x] Implement the shared API/error/query utilities and migrate API functions without swallowing non-Axios or malformed-response errors.
+- [x] Replace blank/loading-string branches with consistent loading, error, empty, and retry states.
+- [x] Run client tests, lint, and build; refactor while green.
+- [x] Commit only Task 3 files.
 
 ### Task 4: Responsive design system and accessible workflow UI
 
@@ -88,11 +88,11 @@
 - Task form exposes assignee, due date, and priority; project view filters by text, status, assignee, priority, and overdue state.
 - Every task status can be changed by an explicit labeled control; drag-and-drop adds keyboard sensors and rolls back failed optimistic updates.
 
-- [ ] Write failing component tests for keyboard-accessible status changes, filter combinations, form validation, focusable controls, and mobile alternative behavior.
-- [ ] Implement visual tokens and primitives, then migrate the primary auth, dashboard, project, team, and task surfaces.
-- [ ] Add planning fields, filter controls, summary counts, confirmations for destructive actions, and robust optimistic rollback.
-- [ ] Run accessibility-oriented component tests, lint, and build.
-- [ ] Commit only Task 4 files.
+- [x] Write failing component tests for keyboard-accessible status changes, filter combinations, form validation, focusable controls, and mobile alternative behavior.
+- [x] Implement visual tokens and primitives, then migrate the primary auth, dashboard, project, team, and task surfaces.
+- [x] Add planning fields, filter controls, summary counts, confirmations for destructive actions, and robust optimistic rollback.
+- [x] Run accessibility-oriented component tests, lint, and build.
+- [x] Commit only Task 4 files.
 
 ### Task 5: Performance, operations, documentation, and final verification
 
@@ -105,9 +105,8 @@
 - API exposes `GET /health` without authentication and validates required environment at startup.
 - CI installs with pnpm and runs backend/client tests, lint, and builds.
 
-- [ ] Write failing tests for the health response and environment validation behavior.
-- [ ] Implement lazy route modules, development-only devtools, structured safe logging, health/startup behavior, examples, and CI.
-- [ ] Run dependency audit, all tests, lint, both production builds, and inspect the bundle report for route splitting.
-- [ ] Review the full diff against the design spec and resolve all critical or important findings.
-- [ ] Commit only Task 5 files and prepare the branch handoff without pushing or merging.
-
+- [x] Write failing tests for the health response and environment validation behavior.
+- [x] Implement lazy route modules, development-only devtools, structured safe logging, health/startup behavior, examples, and CI.
+- [x] Run dependency audit, all tests, lint, both production builds, and inspect the bundle report for route splitting.
+- [x] Review the full diff against the design spec and resolve all critical or important findings.
+- [x] Commit only Task 5 files and prepare the branch handoff without pushing or merging.
