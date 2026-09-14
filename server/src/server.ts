@@ -4,7 +4,10 @@ import { corsConfig } from './config/cors'
 import './config/env'
 import { errorHandler } from './middleware/error'
 import { notFound } from './middleware/notFound'
-import { createRequestLogger } from './middleware/requestLogger'
+import {
+  createRequestLogger,
+  setRequestLogRouteBase,
+} from './middleware/requestLogger'
 import authRoutes from './routes/authRoutes'
 import projectRoutes from './routes/projectRoutes'
 
@@ -21,8 +24,8 @@ app.use(cors(corsConfig))
 /* Leer datos de formularios */
 app.use(express.json())
 
-app.use('/api/auth', authRoutes)
-app.use('/api/projects', projectRoutes)
+app.use('/api/auth', setRequestLogRouteBase('/api/auth'), authRoutes)
+app.use('/api/projects', setRequestLogRouteBase('/api/projects'), projectRoutes)
 app.use(notFound)
 app.use(errorHandler)
 

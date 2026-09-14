@@ -3,7 +3,7 @@ import request from 'supertest'
 import { expect, it } from 'vitest'
 import {
   createRequestLogger,
-  type RequestLog,
+  setRequestLogRouteBase,
 } from '../src/middleware/requestLogger'
 import { errorHandler } from '../src/middleware/error'
 
@@ -14,17 +14,17 @@ process.env.NODE_ENV = 'test'
 
 const authRoutes = (await import('../src/routes/authRoutes')).default
 
-it('logs a matched route template without dynamic segments or credentials', async () => {
-  const entries: RequestLog[] = []
+it('logs a readable request line with the full safe route template', async () => {
+  const lines: unknown[] = []
   const app = express()
   app.use(express.json())
   app.use(
     createRequestLogger({
       enabled: true,
-      write: (entry) => entries.push(entry),
+      write: (line) => lines.push(line),
     })
   )
-  app.use('/api/auth', authRoutes)
+  app.use('/api/auth', setRequestLogRouteBase('/api/auth'), authRoutes)
   app.use(errorHandler)
 
   await request(app)
@@ -36,26 +36,22 @@ it('logs a matched route template without dynamic segments or credentials', asyn
     })
     .expect(422)
 
-  expect(entries).toHaveLength(1)
-  expect(entries[0]).toEqual({
-    timestamp: expect.any(String),
-    method: 'POST',
-    path: '/update-password/:token',
-    status: 422,
-    durationMs: expect.any(Number),
-  })
-  expect(JSON.stringify(entries[0])).not.toMatch(
+  expect(lines).toHaveLength(1)
+  expect(String(lines[0])).toMatch(
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z POST \/api\/auth\/update-password\/:token 422 \d+(?:\.\d+)? ms - \d+$/
+  )
+  expect(String(lines[0])).not.toMatch(
     /739182640517|query-secret|header-secret|body-secret|different-secret/
   )
 })
 
 it('uses a constant safe path when no Express route matched', async () => {
-  const entries: RequestLog[] = []
+  const lines: unknown[] = []
   const app = express()
   app.use(
     createRequestLogger({
       enabled: true,
-      write: (entry) => entries.push(entry),
+      write: (line) => lines.push(line),
     })
   )
 
@@ -64,9 +60,62 @@ it('uses a constant safe path when no Express route matched', async () => {
     .set('Authorization', 'Bearer header-secret')
     .expect(404)
 
-  expect(entries).toHaveLength(1)
-  expect(entries[0].path).toBe('[unmatched]')
-  expect(JSON.stringify(entries[0])).not.toMatch(
+  expect(lines).toHaveLength(1)
+  expect(String(lines[0])).toMatch(
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z GET \[unmatched\] 404 \d+(?:\.\d+)? ms - \d+$/
+  )
+  expect(String(lines[0])).not.toMatch(
     /path-secret|query-secret|header-secret/
   )
+})
+
+it('never derives a parameterized mount path from request values', async () => {
+  const lines: unknown[] = []
+  const app = express()
+  const router = express.Router()
+  app.use(
+    createRequestLogger({
+      enabled: true,
+      write: (line) => lines.push(line),
+    })
+  )
+  router.get('/items/:itemId', (_request, response) => response.sendStatus(204))
+  app.use(
+    '/parents/:parentId',
+    setRequestLogRouteBase('/parents/:parentId'),
+    router
+  )
+
+  await request(app)
+    .get('/parents/parent-secret/items/item-secret?token=query-secret')
+    .expect(204)
+
+  expect(lines).toHaveLength(1)
+  expect(String(lines[0])).toContain(
+    'GET /parents/:parentId/items/:itemId 204'
+  )
+  expect(String(lines[0])).not.toMatch(
+    /parent-secret|item-secret|query-secret/
+  )
+})
+
+it('reports the total time until the response body finishes', async () => {
+  const lines: unknown[] = []
+  const app = express()
+  const responseDelayMs = 60
+  app.use(
+    createRequestLogger({
+      enabled: true,
+      write: (line) => lines.push(line),
+    })
+  )
+  app.get('/stream', (_request, response) => {
+    response.write('first')
+    setTimeout(() => response.end('last'), responseDelayMs)
+  })
+
+  await request(app).get('/stream').expect(200)
+
+  const duration = Number(String(lines[0]).match(/ (\d+(?:\.\d+)?) ms -/)?.[1])
+  expect(duration).toBeGreaterThanOrEqual(responseDelayMs * 0.75)
 })

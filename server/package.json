@@ -21,6 +21,7 @@
     "express-validator": "7.3.2",
     "jsonwebtoken": "9.0.3",
     "mongoose": "9.9.3",
+    "morgan": "1.12.1",
     "nodemailer": "9.1.1"
   },
   "devDependencies": {
@@ -28,6 +29,7 @@
     "@types/cors": "2.8.19",
     "@types/express": "5.0.6",
     "@types/jsonwebtoken": "9.0.10",
+    "@types/morgan": "1.9.10",
     "@types/nodemailer": "8.0.1",
     "@types/supertest": "^7.2.1",
     "mongodb-memory-server": "^11.2.0",
