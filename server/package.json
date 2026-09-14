@@ -6,10 +6,13 @@
   "author": "Noe Ramses Gonzalez Llamosas",
   "type": "commonjs",
   "main": "index.js",
+  "engines": {
+    "node": ">=24.21.0 <25"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "server": "nodemon --exec ts-node src/index.ts",
-    "server:api": "nodemon --exec ts-node src/index.ts --api",
+    "dev": "nodemon --exec ts-node src/index.ts",
+    "dev:api": "nodemon --exec ts-node src/index.ts --api",
     "build": "tsc"
   },
   "dependencies": {
@@ -35,5 +38,6 @@
     "nodemon": "3.1.14",
     "ts-node": "10.9.2",
     "typescript": "5.9.3"
-  }
+  },
+  "packageManager": "pnpm@10.26.2+sha512.0e308ff2005fc7410366f154f625f6631ab2b16b1d2e70238444dd6ae9d630a8482d92a451144debc492416896ed16f7b114a86ec68b8404b2443869e68ffda6"
 }

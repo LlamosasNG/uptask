@@ -64,8 +64,8 @@ Sigue estos pasos para ejecutar el proyecto en tu entorno local.
 
 Asegúrate de tener instalado lo siguiente:
 
-- Node.js (v18 o superior)
-- npm (o tu gestor de paquetes preferido)
+- Node.js 24.21.0 LTS (declarado en `.nvmrc`)
+- pnpm 10.26.2 mediante Corepack
 - MongoDB (local o una instancia en la nube como MongoDB Atlas)
 
 ### Instalación
@@ -77,19 +77,33 @@ Asegúrate de tener instalado lo siguiente:
    cd uptask
    ```
 
-2. **Instala las dependencias del Backend:**
+2. **Activa las versiones del proyecto:**
+
+   ```bash
+   # Con nvm (con fnm, usa los mismos subcomandos)
+   nvm install
+   nvm use
+   corepack enable
+
+   node --version # v24.21.0
+   ```
+
+   Corepack leerá cada `package.json` y seleccionará pnpm 10.26.2 automáticamente.
+
+3. **Instala las dependencias del Backend:**
 
    ```bash
    cd server
-   npm install
+   pnpm --version # 10.26.2
+   pnpm install --frozen-lockfile
    ```
 
-3. **Instala las dependencias del Frontend:**
+4. **Instala las dependencias del Frontend:**
 
    ```bash
-   # Desde la carpeta raíz 'uptask'
-   cd client
-   npm install
+   # Continúa desde la carpeta server del paso anterior
+   cd ../client
+   pnpm install --frozen-lockfile
    ```
 
 ### Variables de Entorno
@@ -122,14 +136,15 @@ SMTP_PASS=<TU_PASSWORD_SMTP>
 
 **Frontend (`/client`):**
 
-- `npm run dev`: Inicia el servidor de desarrollo de Vite.
-- `npm run build`: Compila la aplicación de React para producción.
-- `npm run lint`: Ejecuta ESLint para analizar el código.
+- `pnpm dev`: Inicia el servidor de desarrollo de Vite.
+- `pnpm build`: Compila la aplicación de React para producción.
+- `pnpm lint`: Ejecuta ESLint para analizar el código.
 
 **Backend (`/server`):**
 
-- `npm run server`: Inicia el servidor de desarrollo con nodemon y ts-node.
-- `npm run server:api`: Inicia el servidor en modo API.
+- `pnpm dev`: Inicia el servidor de desarrollo con nodemon y ts-node.
+- `pnpm dev:api`: Inicia el servidor aceptando clientes API sin origen de navegador.
+- `pnpm build`: Verifica y compila TypeScript.
 
 ---
 
