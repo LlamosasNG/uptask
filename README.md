@@ -64,7 +64,7 @@ Sigue estos pasos para ejecutar el proyecto en tu entorno local.
 
 Asegúrate de tener instalado lo siguiente:
 
-- Node.js 24.21.0 LTS (declarado en `.nvmrc`)
+- Node.js 24.20.0 LTS proporcionado por `nodejs-lts-krypton` en Arch Linux
 - pnpm 10.26.2 mediante Corepack
 - MongoDB (local o una instancia en la nube como MongoDB Atlas)
 
@@ -77,18 +77,13 @@ Asegúrate de tener instalado lo siguiente:
    cd uptask
    ```
 
-2. **Activa las versiones del proyecto:**
+2. **Verifica las versiones instaladas en el sistema:**
 
    ```bash
-   # Con nvm (con fnm, usa los mismos subcomandos)
-   nvm install
-   nvm use
-   corepack enable
-
-   node --version # v24.21.0
+   node --version # v24.20.0
    ```
 
-   Corepack leerá cada `package.json` y seleccionará pnpm 10.26.2 automáticamente.
+   El proyecto utiliza directamente la versión LTS de Node.js proporcionada por Arch Linux; no requiere nvm, fnm ni archivos de selección de runtime.
 
 3. **Instala las dependencias del Backend:**
 

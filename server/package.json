@@ -6,9 +6,6 @@
   "author": "Noe Ramses Gonzalez Llamosas",
   "type": "commonjs",
   "main": "index.js",
-  "engines": {
-    "node": ">=24.21.0 <25"
-  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon --exec ts-node src/index.ts",
@@ -34,6 +31,7 @@
     "@types/express": "5.0.6",
     "@types/jsonwebtoken": "9.0.10",
     "@types/morgan": "1.9.10",
+    "@types/node": "24.13.4",
     "@types/nodemailer": "7.0.11",
     "nodemon": "3.1.14",
     "ts-node": "10.9.2",
