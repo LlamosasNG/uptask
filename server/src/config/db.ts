@@ -1,4 +1,4 @@
-import colors from 'colors'
+import colors from 'colors/safe'
 import dns from 'dns'
 import mongoose from 'mongoose'
 import { exit } from 'node:process'
@@ -10,10 +10,10 @@ export const connectDB = async () => {
   try {
     const { connection } = await mongoose.connect(env.DATABASE_URL)
     const url = `${connection.host}:${connection.port}`
-    console.log(colors.magenta.bold(`MongoDB connected: ${url}`))
+    console.log(colors.bold(colors.magenta(`MongoDB connected: ${url}`)))
   } catch (error) {
     //console.log(error.message)
-    console.log(colors.red.bold('Error connecting to MongoDB'))
+    console.log(colors.bold(colors.red('Error connecting to MongoDB')))
     exit(1)
   }
 }

@@ -16,41 +16,37 @@
     "@headlessui/react": "2.2.10",
     "@heroicons/react": "2.2.0",
     "@tailwindcss/vite": "4.3.3",
-    "@tanstack/react-query": "5.101.4",
-    "@tanstack/react-query-devtools": "5.101.4",
-    "axios": "1.19.0",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "react-hook-form": "7.85.0",
+    "@tanstack/react-query": "5.103.2",
+    "@tanstack/react-query-devtools": "5.103.2",
+    "axios": "1.20.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-hook-form": "7.88.0",
     "react-loader-spinner": "^8.0.2",
-    "react-router-dom": "7.18.2",
+    "react-router-dom": "7.18.4",
     "react-toastify": "11.1.0",
     "tailwindcss": "4.3.3",
-    "zod": "4.4.3"
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@tailwindcss/forms": "^0.5.11",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
-    "@types/node": "26.2.0",
-    "@types/react": "19.2.18",
-    "@types/react-dom": "19.2.4",
+    "@types/node": "26.6.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@typescript/native": "npm:typescript@7.0.2",
     "@vitejs/plugin-react": "6.1.1",
-    "eslint": "10.8.1",
+    "eslint": "10.11.0",
     "eslint-plugin-react-hooks": "7.1.1",
-    "eslint-plugin-react-refresh": "0.5.4",
-    "globals": "17.11.0",
-    "jsdom": "^30.0.1",
-    "typescript": "5.9.3",
-    "typescript-eslint": "8.67.0",
-    "vite": "8.2.1",
-    "vitest": "^4.1.11"
+    "eslint-plugin-react-refresh": "0.5.7",
+    "globals": "17.12.0",
+    "jsdom": "^30.1.1",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "typescript-eslint": "8.70.1",
+    "vite": "8.3.0",
+    "vitest": "^5.0.1"
   },
-  "pnpm": {
-    "overrides": {
-      "esbuild": "0.28.1"
-    }
-  },
-  "packageManager": "pnpm@10.26.2+sha512.0e308ff2005fc7410366f154f625f6631ab2b16b1d2e70238444dd6ae9d630a8482d92a451144debc492416896ed16f7b114a86ec68b8404b2443869e68ffda6"
+  "packageManager": "pnpm@11.2.2+sha512.36e6621fad506178936455e70247b8808ef4ec25797a9f437a93281a020484e2607f6a469a22e982987c3dbb8866e3071514ab10a4a1749e06edcd1ec118436f"
 }

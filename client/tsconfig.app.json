@@ -6,17 +6,8 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
-    "baseUrl": "src",
     "paths": {
-      "@/components/*": ["components/*"],
-      "@/views/*": ["views/*"],
-      "@/layouts/*": ["layouts/*"],
-      "@/types/*": ["types/*"],
-      "@/api/*": ["api/*"],
-      "@/lib/*": ["lib/*"],
-      "@/utils/*": ["utils/*"],
-      "@/locales/*": ["locales/*"],
-      "@/hooks/*": ["hooks/*"]
+      "@/*": ["./src/*"]
     },
 
     /* Bundler mode */

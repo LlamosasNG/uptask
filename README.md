@@ -64,9 +64,11 @@ Sigue estos pasos para ejecutar el proyecto en tu entorno local.
 
 Asegúrate de tener instalado lo siguiente:
 
-- Node.js 22 (LTS)
-- pnpm 10.26.2 (puedes habilitarlo con Corepack)
+- Node.js 24.21.0 LTS
+- pnpm 11.2.2 (puedes habilitarlo con Corepack)
 - MongoDB Atlas o un servidor local configurado como replica set
+
+El proyecto utiliza TypeScript 7 para la compilación. También conserva la API de TypeScript 6 mediante el paquete oficial de compatibilidad porque herramientas como `typescript-eslint` y `ts-node` aún dependen de esa API durante la transición a TypeScript 7.
 
 ### Instalación
 
