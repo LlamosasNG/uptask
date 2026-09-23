@@ -1,73 +1,88 @@
 import { getProjects } from '@/api/ProjectAPI'
 import LoadingApp from '@/components/LoadingApp'
+import AsyncState from '@/components/AsyncState'
 import DeleteProjectModal from '@/components/projects/DeleteProjectModal'
 import { useAuth } from '@/hooks/useAuth'
 import { isManager } from '@/utils/policies'
-import { Menu, MenuButton, MenuItems, Transition } from '@headlessui/react'
+import {
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuItems,
+  Transition,
+} from '@headlessui/react'
 import { EllipsisVerticalIcon } from '@heroicons/react/20/solid'
 import { useQuery } from '@tanstack/react-query'
 import { Fragment } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { queryKeys } from '@/api/queryKeys'
+import PageHeader from '@/components/ui/PageHeader'
+import EmptyState from '@/components/ui/EmptyState'
 
 export default function DashboardView() {
   const location = useLocation()
   const navigate = useNavigate()
   const { data: user, isLoading: authLoading } = useAuth()
-  const { data, isLoading } = useQuery({
-    queryKey: ['projects'],
+  const { data, error, isLoading, refetch } = useQuery({
+    queryKey: queryKeys.projects.all(),
     queryFn: getProjects,
   })
 
-  if (isLoading && authLoading) return <LoadingApp />
+  if (isLoading || authLoading) return <LoadingApp />
+  if (error)
+    return (
+      <AsyncState
+        data={data}
+        error={error}
+        isLoading={false}
+        empty={null}
+        onRetry={() => void refetch()}
+      >
+        {() => null}
+      </AsyncState>
+    )
   if (data && user)
     return (
       <>
-        <h1 className="text-5xl font-black">Mis proyectos</h1>
-        <p className="text-2xl font-light text-gray-500 mt-5">
-          Maneja y administra tus proyectos
-        </p>
-
-        <nav className="mt-5">
-          <Link
-            className="bg-purple-400 hover:bg-purple-500 px-10 py-3 text-white text-xl font-bold cursor-pointer transition-colors"
-            to={'/projects/create'}
-          >
-            Nuevo proyecto
-          </Link>
-        </nav>
+        <PageHeader
+          title="Mis proyectos"
+          description="Maneja y administra tus proyectos"
+          actions={
+            <Link className="btn btn-primary" to={'/projects/create'}>
+              Nuevo proyecto
+            </Link>
+          }
+        />
         {data.length ? (
-          <ul
-            role="list"
-            className="divide-y divide-gray-100 border border-gray-100 mt-10 bg-white shadow-lg"
-          >
+          <ul role="list" className="grid gap-4 lg:grid-cols-2">
             {data.map((project) => (
               <li
                 key={project._id}
-                className="flex justify-between gap-x-6 px-5 py-10"
+                className="flex justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
               >
                 <div className="flex min-w-0 gap-x-4">
                   <div className="min-w-0 flex-auto space-y-2">
                     <div className="mb-2">
                       {isManager(project.manager, user._id) ? (
-                        <p className="font-bold text-xs uppercase bg-indigo-50 text-indigo-500 border-2 border-indigo-500 rounded-lg inline-block py-1 px-5">
-                          Manager
+                        <p className="inline-block rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-800">
+                          Responsable
                         </p>
                       ) : (
-                        <p className="font-bold text-xs uppercase bg-green-50 text-green-500 border-2 border-green-500 rounded-lg inline-block py-1 px-5">
+                        <p className="inline-block rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                           Colaborador
                         </p>
                       )}
                     </div>
                     <Link
                       to={`projects/${project._id}`}
-                      className="text-gray-600 cursor-pointer hover:underline text-3xl font-bold"
+                      className="break-words text-xl font-bold text-slate-900 hover:text-violet-700 hover:underline"
                     >
                       {project.projectName}
                     </Link>
-                    <p className="text-sm text-gray-400 mt-2">
+                    <p className="mt-2 break-words text-sm text-slate-600">
                       Cliente: {project.clientName}
                     </p>
-                    <p className="text-sm text-gray-400">
+                    <p className="break-words text-sm text-slate-600">
                       {project.description}
                     </p>
                   </div>
@@ -75,7 +90,9 @@ export default function DashboardView() {
                 <div className="flex shrink-0 items-center gap-x-6">
                   <Menu as="div" className="relative flex-none">
                     <MenuButton className="-m-2.5 block p-2.5 text-gray-500 hover:text-gray-900 cursor-pointer">
-                      <span className="sr-only">opciones</span>
+                      <span className="sr-only">
+                        Opciones de {project.projectName}
+                      </span>
                       <EllipsisVerticalIcon
                         className="h-7 w-7"
                         aria-hidden="true"
@@ -91,38 +108,38 @@ export default function DashboardView() {
                       leaveTo="transform opacity-0 scale-95"
                     >
                       <MenuItems className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none">
-                        <MenuItems>
+                        <MenuItem>
                           <Link
                             to={`/projects/${project._id}`}
                             className="block px-3 py-1 text-sm leading-6 text-gray-900 hover:bg-gray-100 w-full text-left rounded-sm"
                           >
                             Ver Proyecto
                           </Link>
-                        </MenuItems>
+                        </MenuItem>
                         {isManager(project.manager, user._id) && (
                           <>
-                            <MenuItems>
+                            <MenuItem>
                               <Link
                                 to={`projects/${project._id}/edit`}
                                 className="block px-3 py-1 text-sm leading-6 text-gray-900 hover:bg-gray-100 w-full text-left rounded-sm"
                               >
                                 Editar Proyecto
                               </Link>
-                            </MenuItems>
-                            <MenuItems>
+                            </MenuItem>
+                            <MenuItem>
                               <button
                                 type="button"
                                 className="block px-3 py-1 text-sm leading-6 text-red-500 cursor-pointer hover:bg-gray-100 w-full text-left rounded-sm"
                                 onClick={() => {
                                   navigate(
                                     location.pathname +
-                                      `?deleteProject=${project._id}`
+                                      `?deleteProject=${project._id}`,
                                   )
                                 }}
                               >
                                 Eliminar Proyecto
                               </button>
-                            </MenuItems>
+                            </MenuItem>
                           </>
                         )}
                       </MenuItems>
@@ -133,15 +150,15 @@ export default function DashboardView() {
             ))}
           </ul>
         ) : (
-          <p className="text-xl font-light text-gray-500 py-20 text-center">
-            No hay proyectos aún, {''}
-            <Link
-              className="text-fuchsia-500 font-bold"
-              to={'/projects/create'}
-            >
-              crea uno nuevo
-            </Link>
-          </p>
+          <EmptyState
+            title="No hay proyectos aún"
+            description="Crea tu primer proyecto para organizar tareas y colaborar con tu equipo."
+            action={
+              <Link className="btn btn-primary" to="/projects/create">
+                crea uno nuevo
+              </Link>
+            }
+          />
         )}
         <DeleteProjectModal />
       </>

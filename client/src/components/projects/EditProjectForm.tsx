@@ -5,6 +5,10 @@ import { Project, ProjectFormData } from "@/types/index";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateProject } from "@/api/ProjectAPI";
 import { toast } from "react-toastify";
+import { queryKeys } from '@/api/queryKeys';
+import PageHeader from '../ui/PageHeader';
+import Card from '../ui/Card';
+import Button from '../ui/Button';
 
 type EditProjectFormProps = {
   data: ProjectFormData;
@@ -36,8 +40,8 @@ export default function EditProjectForm({
       toast.error(error.message);
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      queryClient.invalidateQueries({ queryKey: ["editProject", projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.edit(projectId) });
       toast.success(data);
       navigate("/");
     },
@@ -54,32 +58,24 @@ export default function EditProjectForm({
   return (
     <>
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-5xl font-black">Editar proyecto</h1>
-        <p className="text-2xl font-light text-gray-500 mt-5">
-          Llena el siguiente formulario para editar el proyecto
-        </p>
-
-        <nav className="mt-5">
+        <PageHeader title="Editar proyecto" description="Llena el siguiente formulario para editar el proyecto" actions={
           <Link
-            className="bg-purple-400 hover:bg-purple-500 px-10 py-3 text-white text-xl font-bold cursor-pointer transition-colors"
+            className="btn btn-secondary"
             to={"/"}
           >
             Volver a proyectos
           </Link>
-        </nav>
-
+        } />
+        <Card>
         <form
-          className="mt-10 bg-white shadow-lg p-10 rounded-lg"
+          className="space-y-5"
           onSubmit={handleSubmit(handleForm)}
           noValidate
         >
           <ProjectForm register={register} errors={errors} />
-          <input
-            type="submit"
-            value="Guardar cambios"
-            className="bg-fuchsia-600 hover:bg-fuchsia-700 w-full p-3 text-white uppercase font-bold cursor-pointer transition-colors rounded-lg"
-          />
+          <Button type="submit" className="w-full">Guardar cambios</Button>
         </form>
+        </Card>
       </div>
     </>
   );

@@ -5,9 +5,9 @@ import { ProjectController } from '../controllers/ProjectController'
 import { TaskController } from '../controllers/TaskController'
 import { TeamController } from '../controllers/TeamController'
 import { authenticate } from '../middleware/auth'
+import { requireProjectManager, requireProjectMember } from '../middleware/projectAccess'
 import { projectExists } from '../middleware/project'
 import {
-  hasAuthorization,
   taskBelongsToProject,
   taskExists,
 } from '../middleware/task'
@@ -15,17 +15,47 @@ import { handleInputErrors } from '../middleware/validation'
 
 const router: Router = Router()
 
+const requiredText = (field: string, message: string) =>
+  body(field).isString().withMessage(message).bail().trim().notEmpty().withMessage(message)
+
+const projectTextValidators = [
+  requiredText('projectName', 'El nombre del proyecto es obligatorio'),
+  requiredText('clientName', 'El nombre del cliente es obligatorio'),
+  requiredText('description', 'La descripción es obligatoria'),
+]
+
+const taskTextValidators = [
+  requiredText('name', 'El nombre de la tarea es obligatorio'),
+  requiredText('description', 'La descripción es obligatoria'),
+]
+
+const taskPlanningValidators = [
+  body('assignee')
+    .optional({ nullable: true })
+    .isMongoId()
+    .withMessage('ID de usuario no válido')
+    .bail()
+    .custom((assignee, { req }) => {
+      const isManager = req.project?.manager.toString() === assignee
+      const isMember = req.project?.team.some((member) => member.toString() === assignee)
+      if (isManager || isMember) return true
+      throw new Error('El usuario asignado debe pertenecer al proyecto')
+    }),
+  body('dueDate')
+    .optional({ nullable: true })
+    .isISO8601({ strict: true, strictSeparator: true })
+    .withMessage('La fecha de vencimiento no es válida'),
+  body('priority')
+    .optional()
+    .isIn(['low', 'medium', 'high'])
+    .withMessage('La prioridad no es válida'),
+]
+
 /** Projects */
 router.use(authenticate)
 router.post(
   '/',
-  body('projectName')
-    .notEmpty()
-    .withMessage('El nombre del proyecto es obligatorio'),
-  body('clientName')
-    .notEmpty()
-    .withMessage('El nombre del cliente es obligatorio'),
-  body('description').notEmpty().withMessage('La descripción es obligatoria'),
+  projectTextValidators,
   handleInputErrors,
   ProjectController.createProjects
 )
@@ -35,6 +65,8 @@ router.get(
   '/:id',
   param('id').isMongoId().withMessage('ID no válido'),
   handleInputErrors,
+  projectExists,
+  requireProjectMember,
   ProjectController.getProjectById
 )
 
@@ -42,15 +74,9 @@ router.param('projectId', projectExists)
 router.put(
   '/:projectId',
   param('projectId').isMongoId().withMessage('ID no válido'),
-  body('projectName')
-    .notEmpty()
-    .withMessage('El nombre del proyecto es obligatorio'),
-  body('clientName')
-    .notEmpty()
-    .withMessage('El nombre del cliente es obligatorio'),
-  body('clientName').notEmpty().withMessage('La descripción es obligatoria'),
+  projectTextValidators,
   handleInputErrors,
-  hasAuthorization,
+  requireProjectManager,
   ProjectController.updateProject
 )
 
@@ -58,7 +84,7 @@ router.delete(
   '/:projectId',
   param('projectId').isMongoId().withMessage('ID no válido'),
   handleInputErrors,
-  hasAuthorization,
+  requireProjectManager,
   ProjectController.deleteProject
 )
 
@@ -68,21 +94,23 @@ router.param('taskId', taskBelongsToProject)
 
 router.post(
   '/:projectId/tasks',
-  hasAuthorization,
-  body('name').notEmpty().withMessage('El nombre de la tarea es obligatorio'),
-  body('description').notEmpty().withMessage('La descripción es obligatoria'),
+  requireProjectManager,
+  taskTextValidators,
+  taskPlanningValidators,
   handleInputErrors,
   TaskController.createTask
 )
 
 router.get(
   '/:projectId/tasks',
+  requireProjectMember,
   handleInputErrors,
   TaskController.getProjectTasks
 )
 
 router.get(
   '/:projectId/tasks/:taskId',
+  requireProjectMember,
   param('taskId').isMongoId().withMessage('ID no válido'),
   handleInputErrors,
   TaskController.getTaksById
@@ -90,17 +118,17 @@ router.get(
 
 router.put(
   '/:projectId/tasks/:taskId',
-  hasAuthorization,
+  requireProjectManager,
   param('taskId').isMongoId().withMessage('ID no válido'),
-  body('name').notEmpty().withMessage('El nombre de la tarea es obligatorio'),
-  body('description').notEmpty().withMessage('La descripción es obligatoria'),
+  taskTextValidators,
+  taskPlanningValidators,
   handleInputErrors,
   TaskController.updateTask
 )
 
 router.delete(
   '/:projectId/tasks/:taskId',
-  hasAuthorization,
+  requireProjectManager,
   param('taskId').isMongoId().withMessage('ID no válido'),
   handleInputErrors,
   TaskController.deleteTask
@@ -108,8 +136,11 @@ router.delete(
 
 router.post(
   '/:projectId/tasks/:taskId/status',
+  requireProjectMember,
   param('taskId').isMongoId().withMessage('ID no válido'),
-  body('status').notEmpty().withMessage('El estado es obligatorio'),
+  body('status')
+    .isIn(['pending', 'onHold', 'inProgress', 'underReview', 'completed'])
+    .withMessage('Estado no válido'),
   handleInputErrors,
   TaskController.updateStatus
 )
@@ -117,15 +148,17 @@ router.post(
 /** Teams */
 router.post(
   '/:projectId/team/find',
+  requireProjectManager,
   body('email').isEmail().toLowerCase().withMessage('El email no es válido'),
   handleInputErrors,
   TeamController.findMemberByEmail
 )
 
-router.get('/:projectId/team', TeamController.getProjectTeam)
+router.get('/:projectId/team', requireProjectMember, TeamController.getProjectTeam)
 
 router.post(
   '/:projectId/team',
+  requireProjectManager,
   body('id').isMongoId().withMessage('ID no válido'),
   handleInputErrors,
   TeamController.addMemberById
@@ -133,6 +166,7 @@ router.post(
 
 router.delete(
   '/:projectId/team/:userId',
+  requireProjectManager,
   param('userId').isMongoId().withMessage('ID no válido'),
   handleInputErrors,
   TeamController.removeMemberById
@@ -141,6 +175,7 @@ router.delete(
 // Routes for notes
 router.post(
   '/:projectId/tasks/:taskId/notes',
+  requireProjectMember,
   body('content')
     .notEmpty()
     .withMessage('El contenido de la nota es obligatorio'),
@@ -150,12 +185,14 @@ router.post(
 
 router.get(
   '/:projectId/tasks/:taskId/notes',
+  requireProjectMember,
   handleInputErrors,
   NoteController.getTaskNotes
 )
 
 router.delete(
   '/:projectId/tasks/:taskId/notes/:noteId',
+  requireProjectMember,
   param('noteId').isMongoId().withMessage('ID no válido'),
   handleInputErrors,
   NoteController.deleteNote

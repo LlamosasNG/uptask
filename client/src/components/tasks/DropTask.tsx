@@ -16,7 +16,7 @@ export default function DropTask({ status }: DropTaskprops) {
     <div
       style={style}
       ref={setNodeRef}
-      className="text-xs font-semibold uppercase p-2 border border-dashed border-slate-500 mt-5 grid place-content-center text-slate-500"
+      className="grid min-h-11 place-content-center rounded-xl border border-dashed border-slate-300 p-2 text-xs font-medium text-slate-600"
     >
       {' '}
       Soltar Aquí

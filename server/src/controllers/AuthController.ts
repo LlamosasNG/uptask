@@ -1,10 +1,41 @@
 import type { Request, Response } from 'express'
+import mongoose, { type ClientSession, type Types } from 'mongoose'
 import { AuthEmail } from '../emails/AuthEmail'
 import Token from '../models/Token'
 import User from '../models/User'
 import { checkPassword, hashPassword } from '../utils/auth'
 import { generateJWT } from '../utils/jwt'
 import { generateToken } from '../utils/token'
+
+async function atomic<T>(write: (session: ClientSession) => Promise<T>) {
+  const session = await mongoose.startSession()
+  try {
+    return await session.withTransaction(() => write(session))
+  } finally {
+    await session.endSession()
+  }
+}
+
+async function replaceToken(userId: Types.ObjectId) {
+  const code = generateToken()
+  await atomic(async (session) => {
+    await Token.deleteMany({ user: userId }, { session })
+    await new Token({ user: userId, token: code }).save({ session })
+  })
+  return code
+}
+
+class EmailDeliveryError extends Error {}
+
+async function deliverEmail(send: () => Promise<void>, accountCreated = false) {
+  try {
+    await send()
+  } catch {
+    throw new EmailDeliveryError(
+      `${accountCreated ? 'La cuenta se creó' : 'El código se guardó'}, pero no pudimos enviar el email; solicita un nuevo código.`
+    )
+  }
+}
 
 export class AuthController {
   static createAccount = async (req: Request, res: Response) => {
@@ -20,27 +51,25 @@ export class AuthController {
       }
 
       /* Crear usuario */
-      const user = new User(req.body)
-
-      /* Hashear passwords */
-      user.password = await hashPassword(password)
-
-      /* Generar token */
-      const token = new Token()
-      token.token = generateToken()
-      token.user = user._id
-
-      /* Envíar email */
-      AuthEmail.sendConfirmationEmail({
-        email: user.email,
-        name: user.name,
-        token: token.token,
+      const hashedPassword = await hashPassword(password)
+      const code = generateToken()
+      const user = await atomic(async (session) => {
+        const created = new User({ name: req.body.name, email, password: hashedPassword })
+        await created.save({ session })
+        await new Token({ token: code, user: created._id }).save({ session })
+        return created
       })
 
-      await Promise.allSettled([token.save(), user.save()])
+      /* Envíar email */
+      await deliverEmail(() => AuthEmail.sendConfirmationEmail({
+        email: user.email,
+        name: user.name,
+        token: code,
+      }), true)
+
       res.send('Cuenta creada correctamente, revisa tu email para confirmarla')
     } catch (error) {
-      res.status(500).json({ error: 'Hubo un error al crear la cuenta' })
+      res.status(500).json({ error: error instanceof EmailDeliveryError ? error.message : 'Hubo un error al crear la cuenta' })
     }
   }
 
@@ -48,17 +77,22 @@ export class AuthController {
     try {
       const { token } = req.body
 
-      const tokenExist = await Token.findOne({ token })
-      if (!tokenExist) {
+      const confirmed = await atomic(async (session) => {
+        const tokenExist = await Token.findOne({ token }).session(session)
+        if (!tokenExist) return false
+        const user = await User.findById(tokenExist.user).session(session)
+        if (!user) return false
+        user.confirmed = true
+        await user.save({ session })
+        await tokenExist.deleteOne({ session })
+        return true
+      })
+      if (!confirmed) {
         const error = new Error('Token no válido')
         res.status(404).json({ error: error.message })
         return
       }
 
-      const user = await User.findById(tokenExist.user)
-      user.confirmed = true
-
-      await Promise.allSettled([user.save(), tokenExist.deleteOne()])
       res.send('Cuenta confirmada correctamente')
     } catch (error) {
       res.status(500).json({ error: 'Hubo un error al confirmar la cuenta' })
@@ -75,16 +109,13 @@ export class AuthController {
         return
       }
       if (!user.confirmed) {
-        const token = new Token()
-        token.user = user._id
-        token.token = generateToken()
-        await token.save()
+        const token = await replaceToken(user._id)
 
-        AuthEmail.sendConfirmationEmail({
+        await deliverEmail(() => AuthEmail.sendConfirmationEmail({
           email: user.email,
           name: user.name,
-          token: token.token,
-        })
+          token,
+        }))
 
         const error = new Error(
           'La cuenta no ha sido confirmada, hemos enviado un nuevo email de confirmación'
@@ -106,7 +137,7 @@ export class AuthController {
     } catch (error) {
       res
         .status(500)
-        .json({ error: 'Hubo un error al intentar iniciar sesión' })
+        .json({ error: error instanceof EmailDeliveryError ? error.message : 'Hubo un error al intentar iniciar sesión' })
     }
   }
 
@@ -130,21 +161,18 @@ export class AuthController {
       }
 
       /* Generar token */
-      const token = new Token()
-      token.token = generateToken()
-      token.user = user._id
+      const token = await replaceToken(user._id)
 
       /* Envíar email */
-      AuthEmail.sendConfirmationEmail({
+      await deliverEmail(() => AuthEmail.sendConfirmationEmail({
         email: user.email,
         name: user.name,
-        token: token.token,
-      })
+        token,
+      }))
 
-      await Promise.allSettled([token.save(), user.save()])
       res.send('Revisa tu email para confirmar la cuenta')
     } catch (error) {
-      res.status(500).json({ error: 'Hubo un error al confirmar la cuenta' })
+      res.status(500).json({ error: error instanceof EmailDeliveryError ? error.message : 'Hubo un error al confirmar la cuenta' })
     }
   }
 
@@ -161,20 +189,17 @@ export class AuthController {
       }
 
       /* Generar token */
-      const token = new Token()
-      token.token = generateToken()
-      token.user = user._id
-      await token.save()
+      const token = await replaceToken(user._id)
 
       /* Envíar email */
-      AuthEmail.sendPasswordResetToken({
+      await deliverEmail(() => AuthEmail.sendPasswordResetToken({
         email: user.email,
         name: user.name,
-        token: token.token,
-      })
+        token,
+      }))
       res.send('Revisa tu email para reestablecer tu contraseña')
     } catch (error) {
-      res.status(500).json({ error: 'Hubo un error al confirmar la cuenta' })
+      res.status(500).json({ error: error instanceof EmailDeliveryError ? error.message : 'Hubo un error al confirmar la cuenta' })
     }
   }
 
@@ -200,17 +225,22 @@ export class AuthController {
       const { token } = req.params
       const { password } = req.body
 
-      const tokenExist = await Token.findOne({ token })
-      if (!tokenExist) {
+      const hashedPassword = await hashPassword(password)
+      const updated = await atomic(async (session) => {
+        const tokenExist = await Token.findOne({ token }).session(session)
+        if (!tokenExist) return false
+        const user = await User.findById(tokenExist.user).session(session)
+        if (!user) return false
+        user.password = hashedPassword
+        await user.save({ session })
+        await tokenExist.deleteOne({ session })
+        return true
+      })
+      if (!updated) {
         const error = new Error('Token no válido')
         res.status(404).json({ error: error.message })
         return
       }
-
-      const user = await User.findById(tokenExist.user)
-      user.password = await hashPassword(password)
-
-      await Promise.allSettled([user.save(), tokenExist.deleteOne()])
 
       res.send('Contraseña actualizada correctamente')
     } catch (error) {

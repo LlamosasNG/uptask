@@ -2,7 +2,7 @@ import { findMemberById } from '@/api/TeamAPI'
 import { TeamMemberForm } from '@/types/index'
 import { useMutation } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
-import { Bars } from 'react-loader-spinner'
+import { ProgressBar } from 'react-loader-spinner'
 import { useParams } from 'react-router-dom'
 import ErrorMessage from '../ErrorMessage'
 import SearchResult from './SearchResult'
@@ -73,14 +73,15 @@ export default function AddMemberForm() {
         <div className="mt-10">
           {mutation.isPending && (
             <div className="flex items-center justify-center">
-            <Bars
-              height={60}
-              width={60}
-              color="#a855f7"
-              ariaLabel="loading"
-              visible={true}
-            />
-          </div>
+              <ProgressBar
+                height={60}
+                width={100}
+                borderColor="#a855f7"
+                barColor="#c026d3"
+                ariaLabel="Buscando integrante del proyecto"
+                visible
+              />
+            </div>
           )}
           {mutation.error && (
             <ErrorMessage>{mutation.error.message}</ErrorMessage>

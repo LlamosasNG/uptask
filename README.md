@@ -52,7 +52,7 @@ La aplicación está construida con el stack **MERN (MongoDB, Express, React, No
 |              | **JSON Web Tokens (JWT)**                 | Autenticación segura y gestión de sesiones.                |
 |              | **Nodemailer**                            | Envío de correos para confirmación y recuperación.         |
 |              | **Express Validator**                     | Validación de los datos de entrada en las rutas de la API. |
-|              | **CORS & Morgan**                         | Middleware para seguridad y logging de peticiones.         |
+|              | **CORS & logging estructurado**           | Seguridad de origen y logs de peticiones sin datos sensibles. |
 
 ---
 
@@ -64,9 +64,11 @@ Sigue estos pasos para ejecutar el proyecto en tu entorno local.
 
 Asegúrate de tener instalado lo siguiente:
 
-- Node.js 24.20.0 LTS proporcionado por `nodejs-lts-krypton` en Arch Linux
-- pnpm 10.26.2 mediante Corepack
-- MongoDB (local o una instancia en la nube como MongoDB Atlas)
+- Node.js 24.21.0 LTS
+- pnpm 12.5.1
+- MongoDB Atlas o un servidor local configurado como replica set
+
+El proyecto utiliza TypeScript 7 para la compilación. También conserva la API de TypeScript 6 mediante el paquete oficial de compatibilidad porque herramientas como `typescript-eslint` y `ts-node` aún dependen de esa API durante la transición a TypeScript 7.
 
 ### Instalación
 
@@ -77,35 +79,32 @@ Asegúrate de tener instalado lo siguiente:
    cd uptask
    ```
 
-2. **Verifica las versiones instaladas en el sistema:**
+2. **Instala las dependencias del Backend:**
 
    ```bash
-   node --version # v24.20.0
-   ```
-
-   El proyecto utiliza directamente la versión LTS de Node.js proporcionada por Arch Linux; no requiere nvm, fnm ni archivos de selección de runtime.
-
-3. **Instala las dependencias del Backend:**
-
-   ```bash
+   corepack enable
    cd server
-   pnpm --version # 10.26.2
    pnpm install --frozen-lockfile
    ```
 
-4. **Instala las dependencias del Frontend:**
+3. **Instala las dependencias del Frontend:**
 
    ```bash
-   # Continúa desde la carpeta server del paso anterior
-   cd ../client
+   # Desde la carpeta raíz 'uptask'
+   cd client
    pnpm install --frozen-lockfile
    ```
 
 ### Variables de Entorno
 
-Es necesario crear archivos `.env` tanto para el cliente como para el servidor. Puedes usar los archivos `.env.example` como plantilla si los creas.
+Es necesario crear archivos `.env` tanto para el cliente como para el servidor. Copia las plantillas incluidas y reemplaza únicamente los valores de ejemplo:
 
-**Frontend (`/client/.env`):**
+```bash
+cp client/.env.example client/.env.local
+cp server/.env.example server/.env
+```
+
+**Frontend (`/client/.env.local`):**
 
 ```env
 VITE_API_URL=http://localhost:8000/api
@@ -114,7 +113,11 @@ VITE_API_URL=http://localhost:8000/api
 **Backend (`/server/.env`):**
 
 ```env
-DATABASE_URL=<TU_URL_DE_CONEXION_MONGODB>
+NODE_ENV=development
+PORT=8000
+
+# MongoDB Atlas o un replica set local; las transacciones no funcionan en un servidor standalone
+DATABASE_URL=mongodb://127.0.0.1:27017/uptask?replicaSet=rs0
 FRONTEND_URL=http://localhost:5173
 JWT_SECRET=<TU_PALABRA_SECRETA_PARA_JWT>
 
@@ -125,6 +128,25 @@ SMTP_USER=<TU_USUARIO_SMTP>
 SMTP_PASS=<TU_PASSWORD_SMTP>
 ```
 
+`DATABASE_URL` y `JWT_SECRET` son obligatorias en todos los entornos. En producción también se exige `FRONTEND_URL`. El servidor termina durante el arranque si falta alguna variable obligatoria; nunca uses los valores de ejemplo como secretos reales.
+
+### MongoDB y transacciones
+
+UpTask usa transacciones para mantener consistentes las escrituras relacionadas. Por eso `DATABASE_URL` debe apuntar a MongoDB Atlas o a un replica set; una instancia local standalone no es compatible.
+
+MongoDB Atlas ya proporciona un replica set. Para desarrollo local, inicia un nodo con replica set (crea antes el directorio de datos) y configúralo una vez desde otra terminal:
+
+```bash
+mkdir -p ./data/uptask-mongo
+mongod --dbpath ./data/uptask-mongo --replSet rs0 --bind_ip 127.0.0.1 --port 27017
+```
+
+```bash
+mongosh --eval "rs.initiate({_id: 'rs0', members: [{_id: 0, host: '127.0.0.1:27017'}]})"
+```
+
+Después usa `mongodb://127.0.0.1:27017/uptask?replicaSet=rs0` como `DATABASE_URL`. Si el replica set ya está iniciado, `rs.initiate()` no debe repetirse.
+
 ---
 
 ## 📜 Scripts Disponibles
@@ -132,14 +154,33 @@ SMTP_PASS=<TU_PASSWORD_SMTP>
 **Frontend (`/client`):**
 
 - `pnpm dev`: Inicia el servidor de desarrollo de Vite.
-- `pnpm build`: Compila la aplicación de React para producción.
+- `pnpm test`: Ejecuta las pruebas con Vitest.
 - `pnpm lint`: Ejecuta ESLint para analizar el código.
+- `pnpm build`: Verifica TypeScript y compila la aplicación para producción.
 
 **Backend (`/server`):**
 
 - `pnpm dev`: Inicia el servidor de desarrollo con nodemon y ts-node.
 - `pnpm dev:api`: Inicia el servidor aceptando clientes API sin origen de navegador.
+- `pnpm test`: Ejecuta las pruebas de integración con Vitest y MongoDB en memoria.
 - `pnpm build`: Verifica y compila TypeScript.
+
+### Operación y verificación
+
+El endpoint público `GET /health` devuelve `200` con `{ "status": "ok" }` para comprobaciones de liveness. No consulta MongoDB ni expone configuración.
+
+`GET /ready` comprueba la conexión con MongoDB y devuelve `200` con `{ "status": "ready" }` o `503` con `{ "status": "unavailable" }`. Úsalo para comprobar la disponibilidad real de la API desde la VPS; no es necesario publicarlo mediante Nginx.
+
+Las peticiones se registran como JSON estructurado con fecha, método, plantilla de ruta sin valores dinámicos ni parámetros de consulta, estado y duración. Las rutas no reconocidas usan un marcador constante. Los logs no incluyen cuerpos, credenciales ni tokens y se desactivan durante las pruebas.
+
+El workflow de GitHub Actions en `.github/workflows/ci.yml` instala con los lockfiles congelados y ejecuta pruebas y builds del servidor, además de pruebas, lint y build del cliente. Para reproducirlo localmente:
+
+```bash
+(cd server && pnpm install --frozen-lockfile && pnpm test && pnpm build)
+(cd client && pnpm install --frozen-lockfile && pnpm test && pnpm lint && pnpm build)
+```
+
+El workflow también valida Compose y construye las imágenes de producción. Para desplegar en una VPS con Nginx, Certbot, Cloudflare y MongoDB Atlas, consulta la [guía de despliegue](docs/deployment-vps.md).
 
 ---
 

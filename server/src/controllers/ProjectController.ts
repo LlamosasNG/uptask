@@ -1,75 +1,56 @@
-import { Request, Response } from 'express'
+import { Request, RequestHandler, Response } from 'express'
+import mongoose from 'mongoose'
+import { HttpError } from '../errors/HttpError'
+import Note from '../models/Note'
 import Project from '../models/Project'
+import Task from '../models/Task'
+import { asyncHandler } from '../middleware/error'
 
 export class ProjectController {
-  static createProjects = async (req: Request, res: Response) => {
-    const project = new Project(req.body)
-    // Asigna un manager
-    project.manager = req.user._id
-    try {
-      await project.save()
-      res.send('Proyecto creado correctamente')
-    } catch (error) {
-      console.log(error)
-    }
-  }
+  static createProjects: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { projectName, clientName, description } = req.body
+    const project = new Project({ projectName, clientName, description, manager: req.user._id })
+    await project.save()
+    res.send('Proyecto creado correctamente')
+  })
 
-  static getAllProjects = async (req: Request, res: Response) => {
+  static getAllProjects: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
+    const projects = await Project.find({
+      $or: [{ manager: req.user._id }, { team: req.user._id }],
+    })
+    res.json(projects)
+  })
+
+  static getProjectById: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
+    const project = await Project.findById(req.project._id).populate({
+      path: 'tasks',
+      match: { project: req.project._id },
+      populate: { path: 'assignee', select: '_id name' },
+    })
+    if (!project) throw new HttpError(404, 'NOT_FOUND', 'Proyecto no encontrado')
+    res.json(project)
+  })
+
+  static updateProject: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
+    req.project.projectName = req.body.projectName
+    req.project.clientName = req.body.clientName
+    req.project.description = req.body.description
+    await req.project.save()
+    res.send('Proyecto actualizado correctamente')
+  })
+
+  static deleteProject: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
+    const session = await mongoose.startSession()
     try {
-      const projects = await Project.find({
-        $or: [
-          { manager: { $in: [req.user._id] } },
-          { team: { $in: [req.user._id] } },
-        ],
+      await session.withTransaction(async () => {
+        const taskIds = await Task.find({ project: req.project._id }).distinct('_id').session(session)
+        await Note.deleteMany({ task: { $in: taskIds } }, { session })
+        await Task.deleteMany({ project: req.project._id }, { session })
+        await Project.deleteOne({ _id: req.project._id }, { session })
       })
-      res.json(projects)
-    } catch (error) {
-      console.log(error)
-    }
-  }
-
-  static getProjectById = async (req: Request, res: Response) => {
-    const { id } = req.params
-
-    try {
-      const project = await Project.findById(id).populate('tasks')
-      if (!project) {
-        const error = new Error('Proyecto no encontrado')
-        res.status(404).json({ error: error.message })
-        return
-      }
-      if (
-        project.manager.toString() !== req.user._id.toString() &&
-        !project.team.includes(req.user._id)
-      ) {
-        const error = new Error('Acción no válida')
-        res.status(404).json({ error: error.message })
-      }
-      res.json(project)
-    } catch (error) {
-      console.log(error)
-    }
-  }
-
-  static updateProject = async (req: Request, res: Response) => {
-    try {
-      req.project.projectName = req.body.projectName
-      req.project.clientName = req.body.clientName
-      req.project.description = req.body.description
-      await req.project.save()
-
-      res.send('Proyecto actualizado correctamente')
-    } catch (error) {
-      console.log(error)
-    }
-  }
-
-  static deleteProject = async (req: Request, res: Response) => {
-    try {
-      await req.project.deleteOne()
       res.send('Proyecto eliminado correctamente')
-    } catch (error) {
-      console.log(error)
+    } finally {
+      await session.endSession()
     }
-  }
+  })
 }

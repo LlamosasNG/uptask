@@ -59,12 +59,23 @@ export const taskStatusSchema = z.enum([
 
 export type TaskStatus = z.infer<typeof taskStatusSchema>
 
+export const taskPrioritySchema = z.enum(['low', 'medium', 'high'])
+export type TaskPriority = z.infer<typeof taskPrioritySchema>
+
+const taskAssigneeSchema = userSchema.pick({
+  _id: true,
+  name: true,
+})
+
 export const taskSchema = z.object({
   _id: z.string(),
   name: z.string(),
   description: z.string(),
   project: z.string(),
   status: taskStatusSchema,
+  assignee: taskAssigneeSchema.nullable().optional(),
+  dueDate: z.string().datetime().nullable().optional(),
+  priority: taskPrioritySchema.optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   completedBy: z.array(
@@ -72,6 +83,7 @@ export const taskSchema = z.object({
       _id: z.string(),
       user: userSchema,
       status: taskStatusSchema,
+      createdAt: z.string().datetime().optional(),
     })
   ),
   notes: z.array(
@@ -86,10 +98,20 @@ export const taskProjectSchema = taskSchema.pick({
   name: true,
   description: true,
   status: true,
+  assignee: true,
+  dueDate: true,
+  priority: true,
 })
 
 export type Task = z.infer<typeof taskSchema>
-export type TaskFormData = Pick<Task, 'name' | 'description'>
+export const taskFormSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  assignee: z.string().nullable().optional(),
+  dueDate: z.string().date().or(z.string().datetime()).nullable().optional(),
+  priority: taskPrioritySchema.optional(),
+})
+export type TaskFormData = z.infer<typeof taskFormSchema>
 export type TaskProject = z.infer<typeof taskProjectSchema>
 
 /** Projects */
@@ -100,7 +122,7 @@ export const projectSchema = z.object({
   description: z.string(),
   manager: z.string(),
   tasks: z.array(taskProjectSchema),
-  team: z.array(userSchema.pick({ _id: true })),
+  team: z.array(z.string()),
 })
 
 export type Project = z.infer<typeof projectSchema>

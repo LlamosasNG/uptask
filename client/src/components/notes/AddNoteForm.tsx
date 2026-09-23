@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { useLocation, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import ErrorMessage from '../ErrorMessage'
+import { queryKeys } from '@/api/queryKeys'
 
 export default function AddNoteForm() {
   const params = useParams()
@@ -33,7 +34,7 @@ export default function AddNoteForm() {
     },
     onSuccess: (data) => {
       toast.success(data)
-      queryClient.invalidateQueries({ queryKey: ['task', taskId] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(projectId, taskId) })
     },
   })
 
@@ -56,7 +57,7 @@ export default function AddNoteForm() {
           id="content"
           type="text"
           placeholder="Contenido de la nota"
-          className="w-full p-3 border border-gray-300"
+          className="field-control"
           {...register('content', {
             required: 'El contenido de la nota es obligatorio',
           })}
@@ -68,7 +69,7 @@ export default function AddNoteForm() {
       <input
         type="submit"
         value={'Crear Nota'}
-        className="bg-fuchsia-600 hover:bg-fuchsia-700 w-full p-2 text-white font-bold cursor pointer"
+        className="btn btn-primary w-full"
       />
     </form>
   )

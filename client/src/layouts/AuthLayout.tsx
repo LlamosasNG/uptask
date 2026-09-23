@@ -5,14 +5,14 @@ import { ToastContainer } from "react-toastify";
 export default function AuthLayout() {
   return (
     <>
-      <div className="bg-gray-800 min-h-screen">
-        <div className="py-10 lg:py-10 mx-auto w-112.5">
-          <Logo />
-          <div className="mt-10">
+      <main className="min-h-screen bg-slate-900 px-4 py-10 sm:py-16">
+        <div className="mx-auto w-full max-w-md">
+          <div className="mx-auto max-w-64"><Logo /></div>
+          <div className="mt-8">
             <Outlet />
           </div>
         </div>
-      </div>
+      </main>
       <ToastContainer pauseOnHover={false} pauseOnFocusLoss={false} />
     </>
   );

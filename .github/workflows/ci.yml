@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.5.1
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+          cache-dependency-path: |
+            server/pnpm-lock.yaml
+            client/pnpm-lock.yaml
+
+      - name: Install server dependencies
+        working-directory: server
+        run: pnpm install --frozen-lockfile
+
+      - name: Install client dependencies
+        working-directory: client
+        run: pnpm install --frozen-lockfile
+
+      - name: Test server
+        working-directory: server
+        run: pnpm test
+
+      - name: Build server
+        working-directory: server
+        run: pnpm build
+
+      - name: Test client
+        working-directory: client
+        run: pnpm test
+
+      - name: Lint client
+        working-directory: client
+        run: pnpm lint
+
+      - name: Build client
+        working-directory: client
+        run: pnpm build
+
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: verify
+    env:
+      UPTASK_IMAGE_TAG: ci
+      UPTASK_ENV_FILE: ./deploy/server.env.example
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate production Compose configuration
+        run: docker compose -f compose.production.yaml config --quiet
+
+      - name: Build production images
+        run: docker compose -f compose.production.yaml build
+
+      - name: Smoke test web container and SPA routing
+        run: |
+          docker compose -f compose.production.yaml up -d --no-build web
+          curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:3000/ > /dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3000/projects/example > /dev/null
+
+      - name: Stop smoke-test containers
+        if: always()
+        run: docker compose -f compose.production.yaml down
