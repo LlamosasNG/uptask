@@ -37,4 +37,3 @@ Use a restrained slate and violet visual system with reusable controls, visible 
 ## Verification
 
 Backend integration tests cover authentication, manager/member/outsider authorization, nested-resource ownership, validation, and compound writes. Frontend tests cover API failures, route states, filters, and accessible task status changes. CI runs lint, tests, and production builds.
-
