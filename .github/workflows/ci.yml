@@ -80,8 +80,8 @@ jobs:
       - name: Smoke test web container and SPA routing
         run: |
           docker compose -f compose.production.yaml up -d --no-build web
-          curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:3000/ > /dev/null
-          curl --fail --silent --show-error http://127.0.0.1:3000/projects/example > /dev/null
+          curl --fail --silent --show-error --retry 10 --retry-all-errors --retry-delay 1 http://127.0.0.1:3000/ > /dev/null
+          curl --fail --silent --show-error --retry 10 --retry-all-errors --retry-delay 1 http://127.0.0.1:3000/projects/example > /dev/null
 
       - name: Stop smoke-test containers
         if: always()
