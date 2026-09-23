@@ -1,5 +1,6 @@
 import cors from 'cors'
 import express, { Express } from 'express'
+import mongoose from 'mongoose'
 import { corsConfig } from './config/cors'
 import './config/env'
 import { errorHandler } from './middleware/error'
@@ -17,6 +18,20 @@ app.use(createRequestLogger())
 
 app.get('/health', (_request, response) => {
   response.status(200).json({ status: 'ok' })
+})
+
+app.get('/ready', async (_request, response) => {
+  if (mongoose.connection.readyState !== 1 || !mongoose.connection.db) {
+    response.status(503).json({ status: 'unavailable' })
+    return
+  }
+
+  try {
+    await mongoose.connection.db.admin().ping()
+    response.status(200).json({ status: 'ready' })
+  } catch {
+    response.status(503).json({ status: 'unavailable' })
+  }
 })
 
 app.use(cors(corsConfig))

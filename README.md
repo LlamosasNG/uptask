@@ -65,7 +65,7 @@ Sigue estos pasos para ejecutar el proyecto en tu entorno local.
 Asegúrate de tener instalado lo siguiente:
 
 - Node.js 24.21.0 LTS
-- pnpm 11.2.2 (puedes habilitarlo con Corepack)
+- pnpm 12.5.1
 - MongoDB Atlas o un servidor local configurado como replica set
 
 El proyecto utiliza TypeScript 7 para la compilación. También conserva la API de TypeScript 6 mediante el paquete oficial de compatibilidad porque herramientas como `typescript-eslint` y `ts-node` aún dependen de esa API durante la transición a TypeScript 7.
@@ -169,6 +169,8 @@ Después usa `mongodb://127.0.0.1:27017/uptask?replicaSet=rs0` como `DATABASE_UR
 
 El endpoint público `GET /health` devuelve `200` con `{ "status": "ok" }` para comprobaciones de liveness. No consulta MongoDB ni expone configuración.
 
+`GET /ready` comprueba la conexión con MongoDB y devuelve `200` con `{ "status": "ready" }` o `503` con `{ "status": "unavailable" }`. Úsalo para comprobar la disponibilidad real de la API desde la VPS; no es necesario publicarlo mediante Nginx.
+
 Las peticiones se registran como JSON estructurado con fecha, método, plantilla de ruta sin valores dinámicos ni parámetros de consulta, estado y duración. Las rutas no reconocidas usan un marcador constante. Los logs no incluyen cuerpos, credenciales ni tokens y se desactivan durante las pruebas.
 
 El workflow de GitHub Actions en `.github/workflows/ci.yml` instala con los lockfiles congelados y ejecuta pruebas y builds del servidor, además de pruebas, lint y build del cliente. Para reproducirlo localmente:
@@ -177,6 +179,8 @@ El workflow de GitHub Actions en `.github/workflows/ci.yml` instala con los lock
 (cd server && pnpm install --frozen-lockfile && pnpm test && pnpm build)
 (cd client && pnpm install --frozen-lockfile && pnpm test && pnpm lint && pnpm build)
 ```
+
+El workflow también valida Compose y construye las imágenes de producción. Para desplegar en una VPS con Nginx, Certbot, Cloudflare y MongoDB Atlas, consulta la [guía de despliegue](docs/deployment-vps.md).
 
 ---
 

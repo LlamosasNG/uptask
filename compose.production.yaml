@@ -1,0 +1,55 @@
+name: uptask
+
+services:
+  web:
+    build:
+      context: ./client
+    image: uptask-web:${UPTASK_IMAGE_TAG:?Set UPTASK_IMAGE_TAG to the release commit SHA}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    ports:
+      - 127.0.0.1:3000:8080
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  api:
+    build:
+      context: ./server
+    image: uptask-api:${UPTASK_IMAGE_TAG:?Set UPTASK_IMAGE_TAG to the release commit SHA}
+    env_file:
+      - ${UPTASK_ENV_FILE:?Set UPTASK_ENV_FILE to the absolute path of the private server environment file}
+    environment:
+      NODE_ENV: production
+      PORT: "8000"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    ports:
+      - 127.0.0.1:8000:8000
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8000/ready').then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 45s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
